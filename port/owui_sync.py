@@ -17,7 +17,12 @@ Usage:
   owui_sync.py append --chat <id> --user "..." --assistant "..."
   owui_sync.py sync   --jsonl <transcript.jsonl> [--chat <id>] [--title ...]   # full log + images
 """
-import sys, os, json, uuid, argparse, mimetypes
+import sys
+import os
+import json
+import uuid
+import argparse
+import mimetypes
 try:
     import requests
 except ImportError:
@@ -36,6 +41,7 @@ def _newid():
 
 
 def upload_image(path):
+    """Upload a local image to Open WebUI, returning (file_id, markdown_ref)."""
     ctype = mimetypes.guess_type(path)[0] or "application/octet-stream"
     with open(path, "rb") as fh:
         r = requests.post(f"{BASE}/api/v1/files/", headers=H,
@@ -51,6 +57,7 @@ def _msg(role, content, parent=None):
 
 
 def create_chat(title, pairs):
+    """Create a new Open WebUI chat from (user, assistant) message pairs; return its id."""
     msgs, order, prev = {}, [], None
     for u, a in pairs:
         um = _msg("user", u, prev); msgs[um["id"]] = um; order.append(um["id"])
@@ -66,6 +73,7 @@ def create_chat(title, pairs):
 
 
 def append_chat(chat_id, user, assistant):
+    """Append one user/assistant turn to an existing chat; return the assistant message id."""
     r = requests.get(f"{BASE}/api/v1/chats/{chat_id}", headers=H, timeout=120); r.raise_for_status()
     chat = r.json()["chat"]
     hist = chat["history"]; cur = hist.get("currentId")
@@ -86,7 +94,7 @@ def parse_transcript(path):
     turns, images = [], []
     for line in open(path, encoding="utf-8"):
         try: o = json.loads(line)
-        except: continue
+        except Exception: continue
         m = o.get("message", o); role = m.get("role") if isinstance(m, dict) else None
         c = m.get("content") if isinstance(m, dict) else None
         if role not in ("user", "assistant"): continue
@@ -105,16 +113,20 @@ def parse_transcript(path):
 
 
 def cmd_upload(a):
+    """Handle the `upload` subcommand: push one image and print its ref."""
     fid, ref = upload_image(a.path); print(f"id={fid}\n{ref}")
 
 def cmd_new(a):
+    """Handle the `new` subcommand: create a chat from a text file or inline text."""
     text = open(a.text_file, encoding="utf-8").read() if a.text_file else (a.text or "")
     print(create_chat(a.title, [("(session archive)", text)]))
 
 def cmd_append(a):
+    """Handle the `append` subcommand: add one user/assistant turn to a chat."""
     print(append_chat(a.chat, a.user, a.assistant))
 
 def cmd_sync(a):
+    """Handle the `sync` subcommand: archive a full transcript (text + images) to a chat."""
     turns, images = parse_transcript(a.jsonl)
     refs = []
     for p in dict.fromkeys(images):
@@ -135,6 +147,7 @@ def cmd_sync(a):
 
 
 def main():
+    """Parse CLI arguments and dispatch to the selected subcommand handler."""
     ap = argparse.ArgumentParser(prog="owui_sync.py")
     s = ap.add_subparsers(dest="cmd", required=True)
     u = s.add_parser("upload"); u.add_argument("path"); u.set_defaults(fn=cmd_upload)

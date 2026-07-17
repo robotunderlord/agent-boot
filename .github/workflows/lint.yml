@@ -1,0 +1,45 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# lint — "Lint"   [UNIFORM SERVICE PIPELINE STANDARD]
+# ══════════════════════════════════════════════════════════════════════════════
+# gandalf-core lives primarily on github, so this github-hosted mirror fires on
+# every push and backs the README lint/ruff/pydocstyle badges immediately (no LAN
+# runner needed). The CANONICAL gate is the central `validate` reusable, imported
+# by .forgejo/workflows/lint.yml (yamllint + ruff + pydocstyle + gitleaks). That
+# reusable is forgejo-only, so it cannot be `uses:`-called from github — this
+# mirror runs the same ruff + pydocstyle steps directly to keep github status green.
+# TODO(path mismatch): unify once a github-hosted mirror of forge-workflows exists.
+name: lint
+run-name: "Lint"
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gandalf-core-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install linters
+        run: pip install --quiet ruff pydocstyle
+
+      - name: ruff
+        run: ruff check .
+
+      - name: pydocstyle
+        run: pydocstyle --convention=pep257 port/

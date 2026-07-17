@@ -19,7 +19,12 @@ Usage:
   librarian.py consolidate --jsonl <t.jsonl>          # ~65% / session-end sweep (brick wall)
   librarian.py groom       --loop --interval 300      # run as a daemon
 """
-import os, sys, glob, time, argparse, subprocess
+import os
+import sys
+import glob
+import time
+import argparse
+import subprocess
 
 HERE   = os.path.dirname(os.path.abspath(__file__))
 PY     = sys.executable
@@ -50,6 +55,7 @@ After this runs, it is SAFE to `/clear` and paste the resume brief — everythin
 
 
 def fire(worker, sid, jsonl, model, timeout):
+    """Spawn a headless `claude -p` worker for the given directive; return its exit code."""
     os.makedirs(os.path.join(AI, "shelved"), exist_ok=True)
     directive = WORKERS[worker](sid, jsonl)
     print(f"[librarian] batch claude: worker={worker} session={sid[:8]} model={model}")
@@ -62,6 +68,7 @@ def fire(worker, sid, jsonl, model, timeout):
 
 
 def newest_jsonl():
+    """Return the most recently modified transcript under $CLAUDE_PROJECTS, or ""."""
     d = os.environ.get("CLAUDE_PROJECTS", "")
     if not d: return ""
     files = sorted(glob.glob(os.path.join(d, "**", "*.jsonl"), recursive=True),
@@ -70,6 +77,7 @@ def newest_jsonl():
 
 
 def main():
+    """Parse CLI arguments and run the chosen worker once, or as a loop daemon."""
     ap = argparse.ArgumentParser(prog="librarian.py")
     ap.add_argument("worker", choices=list(WORKERS))
     ap.add_argument("--session", default="")

@@ -1,0 +1,20 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# lint (forge) — INTERNAL CI gate   [UNIFORM SERVICE PIPELINE STANDARD]
+# ══════════════════════════════════════════════════════════════════════════════
+# Forge-side gate. Calls the shared `validate` reusable on the egg runner:
+# yamllint + ruff + pydocstyle (python: true — port/librarian.py + port/owui_sync.py)
+# + gitleaks secret-scan. No Helm chart (chart_dir "") — this repo is a framework
+# spec (DAEMONS.md) plus two ported Python daemon tools, not a chart. Lint logic is
+# NOT duplicated here — it is imported from central, same as every other repo.
+name: lint
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  validate:
+    uses: robotunderlord/forge-workflows/.forgejo/workflows/validate.yml@main
+    with:
+      chart_dir: ""       # no Helm chart to lint
+      python: true        # port/*.py → ruff + pydocstyle
