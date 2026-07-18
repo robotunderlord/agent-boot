@@ -1,13 +1,14 @@
 # 🧙 Gandalf Core
 
-<!-- Service/lib-repo badge row. github-hosted → action badges point at github. lint = the
-     central validate gate (imported via .forgejo/workflows/lint.yml, python: true → ruff +
-     pydocstyle); the github lint.yml mirrors it for immediate push status. No docsite, no
-     build artifact, no Argo CD — so no docs/build/argocd badge. Host-only badges
-     (harden/join/netbox/vault/librenms/graylog) do NOT apply — this is a framework/lib repo. -->
-[![lint](https://github.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)](https://github.com/robotunderlord/gandalf-core/actions/workflows/lint.yml)
-![ruff](https://github.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
-![pydocstyle](https://github.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
+<!-- Lib/framework-repo badge row. Forge is CI home (project_forge-is-ci-home): action badges
+     point at forge.robotunderlord.com, NOT github -- the github mirror runs no forge Actions,
+     so a github action badge reads empty/red. lint = the central `validate` gate (imported via
+     .forgejo/workflows/lint.yml, python: true -> ruff + pydocstyle). No docsite, no build
+     artifact, no Argo CD -> no docs/build/argocd badge. Host-only badges (harden/join/netbox/
+     vault/librenms/graylog) do NOT apply -- this is a framework/lib repo, not a host. -->
+![lint](https://forge.robotunderlord.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
+![ruff](https://forge.robotunderlord.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
+![pydocstyle](https://forge.robotunderlord.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
 ![version](https://img.shields.io/badge/version-0.1.0-blue)
 
 A portable operating framework for long-running AI agent instances (Claude Code and
@@ -62,14 +63,29 @@ production**. The current version is the canonical `[project].version` in
 
 Linting is the shared **`validate`** reusable gate (yamllint + ruff + pydocstyle + gitleaks),
 imported — never re-implemented — by [`.forgejo/workflows/lint.yml`](./.forgejo/workflows/lint.yml)
-with `python: true`. A github-hosted mirror ([`.github/workflows/lint.yml`](./.github/workflows/lint.yml))
-runs the same ruff + pydocstyle steps so the badges stay green on the github home. Run it locally:
+with `python: true`. **Forge is the CI home**: that forge run backs the lint/ruff/pydocstyle
+badges above (they point at `forge.robotunderlord.com`, not github — the github mirror runs no
+forge Actions). A github-hosted mirror ([`.github/workflows/lint.yml`](./.github/workflows/lint.yml))
+still runs the same ruff + pydocstyle steps on the github push for immediate status, but it is a
+convenience mirror, not the badge source. Run it locally:
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install ruff pydocstyle
 .venv/bin/ruff check .
 .venv/bin/pydocstyle --convention=pep257 port/
 ```
+
+## Service topology — N/A (not a service)
+
+There is **no `docs/topology.drawio` and no service-definition** (VIP / real-server / service DNS /
+public-vs-internal) for this repo, deliberately. `gandalf-core` is a **framework spec**
+([`DAEMONS.md`](./DAEMONS.md)) plus two ported, standalone Python daemon tools ([`port/`](./port)) —
+it is **pure library / tooling**, not a deployed service or a host. It has no VIP, no MetalLB or
+ingress address, no `*.robotunderlord.com` service DNS name, and no real server or pod it runs on;
+the daemons are a *posture* dropped into an agent's own instructions, wherever that agent already
+runs. A service-topology map applies to repos that represent a running service or host (see
+`bigfolk-hass` for that pattern) — not here. If a future artifact of this repo ever becomes a
+long-running networked service, add the diagram and the four-fact service definition at that point.
 
 ## License
 
