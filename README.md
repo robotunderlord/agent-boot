@@ -5,10 +5,17 @@
      so a github action badge reads empty/red. lint = the central `validate` gate (imported via
      .forgejo/workflows/lint.yml, python: true -> ruff + pydocstyle). No docsite, no build
      artifact, no Argo CD -> no docs/build/argocd badge. Host-only badges (harden/join/netbox/
-     vault/librenms/graylog) do NOT apply -- this is a framework/lib repo, not a host. -->
-![lint](https://forge.robotunderlord.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
-![ruff](https://forge.robotunderlord.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
-![pydocstyle](https://forge.robotunderlord.com/robotunderlord/gandalf-core/actions/workflows/lint.yml/badge.svg)
+     vault/librenms/graylog) do NOT apply -- this is a framework/lib repo, not a host.
+     NOTE (2026-07-22 Narvi pass): the forge mirror of this repo lives under the personal
+     `gandalf` forge account (http://192.168.11.130:3000/gandalf/gandalf-core), NOT the
+     `robotunderlord` org like the rest of the estate -- the badge URLs below were pointing at
+     a namespace that doesn't hold this repo (fixed here). The repo is also `private` there, so
+     these badges will not render for anyone without a forge login regardless of path. Whether
+     gandalf-core should move to the `robotunderlord` org (matching every other repo) or stay
+     under the personal `gandalf` account is left for human decision -- not changed here. -->
+![lint](https://forge.robotunderlord.com/gandalf/gandalf-core/actions/workflows/lint.yml/badge.svg)
+![ruff](https://forge.robotunderlord.com/gandalf/gandalf-core/actions/workflows/lint.yml/badge.svg)
+![pydocstyle](https://forge.robotunderlord.com/gandalf/gandalf-core/actions/workflows/lint.yml/badge.svg)
 ![version](https://img.shields.io/badge/version-0.1.0-blue)
 
 A portable operating framework for long-running AI agent instances (Claude Code and
