@@ -87,6 +87,11 @@ runs. A service-topology map applies to repos that represent a running service o
 `bigfolk-hass` for that pattern) — not here. If a future artifact of this repo ever becomes a
 long-running networked service, add the diagram and the four-fact service definition at that point.
 
+## As-built / breadcrumb
+
+Reconcile record (NetBox / LibreNMS / vault / Red Book / CI — what's live vs claimed) lives at
+[`docs/breadcrumb.md`](./docs/breadcrumb.md), maintained by the Narvi as-built pass.
+
 ## License
 
 Released under the GNU General Public License — see [`LICENSE`](./LICENSE).
