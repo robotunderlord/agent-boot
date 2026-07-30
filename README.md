@@ -94,6 +94,18 @@ runs. A service-topology map applies to repos that represent a running service o
 `bigfolk-hass` for that pattern) — not here. If a future artifact of this repo ever becomes a
 long-running networked service, add the diagram and the four-fact service definition at that point.
 
+## Porting to your agent
+
+The two CLI tools in [`port/`](./port) are ported from the original work seat; every
+environment-specific value is an ENV var, nothing is hardcoded:
+
+- **librarian.py** — set `VAULT`, `CLAUDE_PROJECTS`, `LIBRARIAN_MODEL`, and
+  `LIBRARIAN_PERSONA` (the name the worker directives address the agent by; defaults
+  to the generic `LIBRARIAN`).
+- **owui_sync.py** — set `OWUI_URL`, `OWUI_KEY`, `OWUI_MODEL` for the Open WebUI archive.
+
+See each tool's module docstring for the full ENV list and usage.
+
 ## As-built / breadcrumb
 
 Reconcile record (NetBox / LibreNMS / vault / Red Book / CI — what's live vs claimed) lives at

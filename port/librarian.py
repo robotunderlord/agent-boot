@@ -12,6 +12,7 @@ Config via ENV (set to YOUR paths — nothing hardcoded):
   VAULT             your Obsidian vault root (breadcrumbs -> $VAULT/.ai/)
   CLAUDE_PROJECTS   dir holding Claude Code .jsonl transcripts (to auto-find newest)
   LIBRARIAN_MODEL   cheap model for the workers (default: a haiku-class alias)
+  LIBRARIAN_PERSONA name the worker directives address the agent by (default: LIBRARIAN)
   OWUI_URL/OWUI_KEY/OWUI_MODEL   for the Open WebUI archive (see owui_sync.py)
 
 Usage:
@@ -32,9 +33,10 @@ OWUI   = f'"{PY}" "{os.path.join(HERE, "owui_sync.py")}"'
 VAULT  = os.environ.get("VAULT", os.path.expanduser("~/vault"))
 AI     = os.path.join(VAULT, ".ai")
 DEFAULT_MODEL = os.environ.get("LIBRARIAN_MODEL", "claude-haiku-4-5-20251001")
+PERSONA = os.environ.get("LIBRARIAN_PERSONA", "LIBRARIAN")
 
 WORKERS = {
-"groom": lambda sid, jsonl: f"""You are the Mithrandir GROOMER (lite context router). Keep the working \
+"groom": lambda sid, jsonl: f"""You are the {PERSONA} GROOMER (lite context router). Keep the working \
 context lean by shelving aging detail to the vault, leaving breadcrumbs.
 1. Read the AGING tail of the transcript {jsonl} (older exchanges, NOT the most recent ~10 — those stay \
 active). Skip tool-result noise.
@@ -44,7 +46,7 @@ and write the detail (key facts, NO secrets) to "{AI}/shelved/{sid}-<n>.md".
 4. NEVER shelve credentials/keys/tokens — those stay only in your secrets store.
 Be terse and cheap. Print one line per segment "<gist> -> ROUTE". Then exit.""",
 
-"consolidate": lambda sid, jsonl: f"""You are the Mithrandir CONSOLIDATOR (session-end / ~65% brick-wall sweep).
+"consolidate": lambda sid, jsonl: f"""You are the {PERSONA} CONSOLIDATOR (session-end / ~65% brick-wall sweep).
 1. ARCHIVE the full session to Open WebUI: run `{OWUI} sync --jsonl "{jsonl}"`.
 2. Read the transcript {jsonl}; audit for open threads, decisions, unsaved work, leaked creds.
 3. Write the RESUME BRIEF to "{AI}/resume-brief.md" — fields Task / State / Next / Threads / Watch / Refs, \

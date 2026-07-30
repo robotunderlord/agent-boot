@@ -15,11 +15,10 @@ vault: none — no ~/.vault/credentials/ entry for this repo; no secrets are com
   ruff/pydocstyle both clean, gitleaks is part of the forge `validate` gate)  [live]
 redbook: ~/.vault/11-projects/gandalf-common-fellowship-architecture.md (related "one image,
   three roles" framing — a sibling concept, not this repo); ~/.vault/11-projects/gandalf-os.md
-  (productization spec that references a similar daemon posture); repo docs (this file +
-  README.md + DAEMONS.md) are meant to be picked up by the next `redbook.py ingest` full
-  rebuild so the loop closes both ways — query `redbook.py query "gandalf-core"` after that
-  ingest to confirm this file surfaces  [intended-not-yet-live: not yet re-ingested as of
-  2026-07-22]
+  (productization spec that references a similar daemon posture); repo docs are ingested —
+  `redbook.py query "DAEMONS brick-wall Resume Brief Quartermaster Librarian"` returns
+  `repo:gandalf-core/README.md#1` and `#2` (score ~0.03)  [live, verified 2026-07-29 by
+  Sam/hobbit ticket #9]
 deploys: nowhere. This is a *posture* — a CLAUDE.md section / system-prompt drop-in
   (DAEMONS.md) — not a running process. port/librarian.py and port/owui_sync.py are standalone
   CLI tools an agent seat invokes on demand (`claude -p` workers + Open WebUI archive calls);
@@ -69,15 +68,18 @@ ci_status: |
    not done here (org transfer + a direct push to someone else's `main` are exactly the kind
    of production-risk/destructive calls this pass is told to leave for a human, and this repo
    is private so a fast-forward push has no anonymous-badge urgency behind it).
-2. **README's "no environment specifics, no private data" claim vs `port/librarian.py`
-   hardcoding "Mithrandir"** — the GROOM/CONSOLIDATE worker directive strings name the
-   "Mithrandir GROOMER" / "Mithrandir CONSOLIDATOR" persona directly in the prompt text
-   (`port/librarian.py` lines ~37, ~47). "Mithrandir" is Eric's actual work-seat host persona
-   name (see `~/.vault` DOSSIER / device notes), not a generic placeholder. Since this repo is
-   GPL'd and explicitly pitched for others to fork ("give your own agent a forest"), that
-   specific name reads as a leftover from the port rather than a deliberately generic example.
-   Left as `UNVERIFIED` intent — not renamed here, since it's a functional prompt-text change
-   the human should confirm before altering agent-facing directive copy.
+2. **FIXED 2026-07-29 (ticket #9, Sam/hobbit, branch `fix/coredocs-productize`).**
+   README's "no environment specifics, no private data" claim vs `port/librarian.py`
+   hardcoding "Mithrandir" was a real productization blocker — the GROOM/CONSOLIDATE worker
+   directive strings named the "Mithrandir GROOMER" / "Mithrandir CONSOLIDATOR" persona
+   directly in the prompt text (`port/librarian.py` lines 37, 47), and a third instance was
+   found in `port/owui_sync.py` line 141 (default archive-chat title) that this round's QC
+   pass missed. All three replaced: `librarian.py` now reads `PERSONA = os.environ.get(
+   "LIBRARIAN_PERSONA", "LIBRARIAN")` (generic default, override via env, documented in the
+   module docstring's ENV list); `owui_sync.py`'s default title now reuses the existing
+   `OWUI_MODEL`-backed `MODEL` var instead of a hardcoded name. README gained a "Porting to
+   your agent" section pointing at both ENV lists. No more "Mithrandir" string anywhere in
+   `port/*.py` (verified via grep + `py_compile`).
 3. **Even with the badge URL fixed, the badges still won't render for outside viewers** —
    the forge repo is `private`, so `.../badge.svg` 303-redirects to `/user/login` regardless
    of namespace. If these badges are meant to be visible on the public github mirror's

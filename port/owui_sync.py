@@ -138,7 +138,7 @@ def cmd_sync(a):
         else: pairs.append((pend or "", txt)); pend = None
     if pend: pairs.append((pend, ""))
     if refs: pairs.append(("(session pictures)", "\n\n".join(refs)))
-    title = a.title or f"Mithrandir session {os.path.basename(a.jsonl)[:8]}"
+    title = a.title or f"{MODEL} session {os.path.basename(a.jsonl)[:8]}"
     if a.chat:
         for u, asst in pairs: append_chat(a.chat, u, asst)
         print(f"appended {len(pairs)} turns + {len(refs)} images to {a.chat}")
