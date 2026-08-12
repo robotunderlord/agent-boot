@@ -1,0 +1,43 @@
+{
+  "//": [
+    "GRADES 13-16 - the disciplines.",
+    "",
+    "School taught habits one at a time. This band teaches the four disciplines those habits belong",
+    "to, so the student can derive a new habit rather than waiting to be given one."
+  ],
+
+  "modules": [
+    {
+      "id": "U-01", "grade": 13, "title": "Verification: make it fail on purpose",
+      "teaches": "prove a check is capable of failing before trusting that it passed",
+      "method": "feed every new safeguard a known-bad input and watch it go red. If you cannot make it fail, you have not proved it works - you have proved nothing.",
+      "exam": "take a check that has only ever reported success, cause it to fail, then repair it and show both states",
+      "evidence": "research/theory/a-check-you-have-not-watched-fail.md",
+      "prereq": ["S-05", "S-12"]
+    },
+    {
+      "id": "U-02", "grade": 14, "title": "Recall: index by situation, never by topic",
+      "teaches": "store knowledge under the situation that should trigger it, so it fires without being consulted",
+      "method": "for each note, write the tell as the situation you will be IN, not the subject it concerns. Then check: would this fire if I were not already looking for it?",
+      "exam": "convert a topic-shaped index into a situation-shaped one, and demonstrate a case where the old form would not have fired",
+      "evidence": "research/experiments/EXP-003-query-shape-and-speed.md",
+      "prereq": ["S-04", "S-12"]
+    },
+    {
+      "id": "U-03", "grade": 15, "title": "Boundaries: identity, secrets, blast radius",
+      "teaches": "know whose authority you are acting under, what must never leave the machine, and which actions are irreversible",
+      "method": "before acting, name the identity, the reversibility, and the exit path of any data involved. Filter output at the point of call, never afterwards - by the time you read it, it is already recorded.",
+      "exam": "identify, in an ordinary-looking command, the one that would emit a credential as a side effect",
+      "evidence": "research/runbooks/output-that-leaks-by-accident.md",
+      "prereq": ["S-06", "S-10"]
+    },
+    {
+      "id": "U-04", "grade": 16, "title": "Documentation: write for the next ignorant reader",
+      "teaches": "produce a record that someone who was not there - usually a later you, with no memory - can act on cold",
+      "method": "write the landmines louder than the fix. Date every live claim and mark it verified, stale or unverified. Detail in ONE place; pointers everywhere else.",
+      "exam": "hand your write-up to a reader with no context and have them complete the task without asking you a question",
+      "evidence": "research/theory/write-for-the-next-ignorant-reader.md",
+      "prereq": ["S-12", "U-02"]
+    }
+  ]
+}

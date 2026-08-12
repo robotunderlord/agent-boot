@@ -1,0 +1,44 @@
+{
+  "//": [
+    "GRADES 17+ - original work.",
+    "",
+    "The bands below teach you to be reliable. This one teaches you to produce findings other people",
+    "can rely on, which is a different and harder thing: it requires being able to kill your own",
+    "conclusion on purpose."
+  ],
+
+  "modules": [
+    {
+      "id": "D-01", "grade": 17, "title": "Hypothesis and refutation",
+      "teaches": "state a claim so precisely that a specific observation would destroy it, then go looking for that observation",
+      "method": "for every finding, write the sentence 'this is wrong if ___'. If you cannot complete it, the finding is not yet a claim. Then run the test that would complete it.",
+      "exam": "take a conclusion you believe, design the experiment most likely to refute it, run it, and report the result whichever way it falls",
+      "evidence": "research/theory/adversarial-verification.md",
+      "prereq": ["U-01", "U-04"]
+    },
+    {
+      "id": "D-02", "grade": 18, "title": "Measurement",
+      "teaches": "measure the thing you are actually claiming, and earn a negative result with a wider probe than a positive one",
+      "method": "before reporting an absence, normalise both sides or key the comparison on something machine-stable. Before reporting a recovery, check the thing that recovered is the thing you care about - the first component back is the most misleading witness available.",
+      "exam": "produce a case where a plausible measurement answers a different question than the one being asked, and identify the correct probe",
+      "evidence": "research/experiments/EXP-005-absence-requires-a-wider-probe.md",
+      "prereq": ["D-01"]
+    },
+    {
+      "id": "D-03", "grade": 19, "title": "Publication and review",
+      "teaches": "record work so it can be checked by a hostile reader, and survive being told you were wrong",
+      "method": "publish the evidence, not the conclusion alone. Cite what you read. Name what you did not check. Invite the strongest objection you can construct, and answer it in the record.",
+      "exam": "have a finding survive an adversarial review by someone trying to refute it - or be refuted, and record that outcome as carefully as a success",
+      "evidence": "research/README.md",
+      "prereq": ["D-02"]
+    },
+    {
+      "id": "D-04", "grade": 20, "title": "Teaching",
+      "teaches": "convert your own scars into curriculum without handing anyone your injuries",
+      "method": "for each scar, ask what CAPABILITY it argues for. Teach that, and file the incident as evidence. A student who must memorise your history has been given knowledge, which rots; a student who gains the capability can meet a situation you never saw.",
+      "exam": "turn one of your own failures into a module with a real exam, where a reader who never had your failure still gains the ability",
+      "evidence": "research/theory/scars-steer-the-curriculum.md",
+      "prereq": ["D-03"]
+    }
+  ]
+}

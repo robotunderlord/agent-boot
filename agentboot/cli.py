@@ -11,11 +11,14 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import sys
 from pathlib import Path
 
 from .boot import Boot, Tier
+from .curriculum import Curriculum
 from .enforcement import LAYERS, POSTURE_LAYER, EnforcementInstaller
+from .intake import Intake, load_answers
 from .persona import Wardrobe
 from .steps import FileStep, LazyStep
 
@@ -23,6 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = REPO_ROOT / "examples"
 DEFAULT_PAYLOADS = EXAMPLES / "payloads"
 DEFAULT_AVATARS = EXAMPLES / "avatars"
+CURRICULUM = REPO_ROOT / "curriculum"
 
 
 def _dirs(args: argparse.Namespace) -> tuple[Path, Path]:
@@ -141,7 +145,7 @@ them.
 """
 
 
-def _init(payload_dir: Path) -> int:
+def _init(payload_dir: Path, cooked: bool = False) -> int:
     """Scaffold the operator's own ledger and wardrobe - the shape, never the content.
 
     This exists because the package is a CLASS, not an inheritance. Shipping a populated ledger
@@ -161,9 +165,31 @@ def _init(payload_dir: Path) -> int:
     tools = payload_dir / "tools.d"
     tools.mkdir(parents=True, exist_ok=True)
     print(f"[ OK ] {'tools.d':<10} {tools}")
+
+    if cooked:
+        target = payload_dir / "curriculum"
+        target.mkdir(parents=True, exist_ok=True)
+        copied = 0
+        for src in sorted(CURRICULUM.glob("*.json")):
+            dst = target / src.name
+            if not dst.exists():
+                shutil.copyfile(src, dst)
+                copied += 1
+        loaded = Curriculum()
+        loaded.load(target)
+        print(f"[ OK ] {'curriculum':<10} {copied} syllabus file(s) -> {loaded.summary()}")
+        print()
+        print("COOKED: it boots with the ladder loaded. Grades are a dependency order and the exam")
+        print("enforces it - progress is measured in exams passed, never in modules read.")
+        return 0
+
     print()
-    print("Empty on purpose. The package gives you the ability to hold lessons, personas and tools;")
-    print("what goes in them is yours to earn. Copy the SHAPE from examples/, never the content.")
+    print("BLANK on purpose. It has the ability to hold lessons, personas and tools; what goes in")
+    print("them is yours. Copy the SHAPE from examples/, never the content.")
+    print()
+    print("Now run the intake - it configures this container from what you can discover, what you")
+    print("already know about the user, and what only they can tell you:")
+    print("    python3 -m agentboot intake")
     return 0
 
 
@@ -188,18 +214,44 @@ def main(argv: list[str] | None = None) -> int:
     """Parse arguments and dispatch to the requested command."""
     ap = argparse.ArgumentParser(prog="agentboot", description=__doc__.split("\n")[0])
     ap.add_argument("command",
-                    choices=["init", "install", "verify", "uninstall", "demo", "posture"])
+                    choices=["init", "intake", "syllabus", "install", "verify",
+                             "uninstall", "demo", "posture"])
     ap.add_argument("--claude-dir", help="override ~/.claude")
     ap.add_argument("--payload-dir", help="override ~/.agentboot")
     ap.add_argument("--payloads", help="override the template source directory")
     ap.add_argument("--prove", action="store_true", help="also confirm every check can fail")
     ap.add_argument("--persona", help="keep an avatar's posture resident every turn (e.g. skeptic)")
     ap.add_argument("--avatars", help="override the avatar source directory")
+    ap.add_argument("--cooked", action="store_true",
+                    help="init preloaded with the curriculum instead of blank")
+    ap.add_argument("--answers", help="intake: a JSON file of answers to apply")
     args = ap.parse_args(argv)
 
     if args.command == "init":
         _, payloads = _dirs(args)
-        return _init(payloads)
+        return _init(payloads, cooked=args.cooked)
+
+    if args.command == "intake":
+        _, payloads = _dirs(args)
+        intake = Intake(payloads)
+        if not args.answers:
+            print(intake.sheet())
+            return 0
+        written = intake.apply(load_answers(args.answers))
+        for path in written:
+            print(f"[ OK ] wrote {path}")
+        if not written:
+            print("[WARN] no answers applied - every field was blank, so nothing was written.")
+        return 0
+
+    if args.command == "syllabus":
+        _, payloads = _dirs(args)
+        cur = Curriculum()
+        cur.load(payloads / "curriculum") or cur.load(CURRICULUM)
+        print(cur.summary())
+        print()
+        print(cur.syllabus())
+        return 0
 
     if args.command == "posture":
         wardrobe = Wardrobe()

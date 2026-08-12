@@ -25,7 +25,9 @@ that should trigger it, because the situation is the only thing an agent actuall
 Nothing in this package knows about any particular environment. Steps are whatever you make them.
 """
 from .boot import Boot, Tier
+from .curriculum import Curriculum, Module
 from .enforcement import LAYERS, EnforcementInstaller, Layer
+from .intake import Intake, Question
 from .keys import Key, KeyFault, Keyring
 from .lessons import Ledger, Lesson
 from .minion import Errand, Minion
@@ -42,7 +44,11 @@ __all__ = [
     "CommandStep",
     "EnforcementInstaller",
     "Errand",
+    "Curriculum",
     "Evidence",
+    "Intake",
+    "Module",
+    "Question",
     "Key",
     "KeyFault",
     "Keyring",
