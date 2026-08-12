@@ -3,7 +3,7 @@
 Four daemons run for the life of every session. They are not invoked — they boot
 with you and run in the background. Each has ONE job and stays in its lane; none
 blocks the work, they run alongside it. Two keep the substrate lean and fast
-(Quartermaster, Librarian); two keep the work sharp and safe (Teacher, Sentinel).
+(Quartermaster, Librarian); two keep the work sharp and safe (Teacher, Skeptic).
 
 > Tune the brick-wall protocol below to **your** model's real context ceiling. The
 > examples assume a hard ~200k-token limit with no large reserve — where the
@@ -81,7 +81,7 @@ Turns work into skill that stays with the human, not the tool.
 - At natural breakpoints: what did this session teach that's worth never
   re-learning?
 
-## 🛡 Sentinel — verification (the present)
+## 🛡 Skeptic — verification (the present)
 Guards the live work. Distrusts confident-but-wrong — AI output LOOKS finished, and
 that gloss is exactly the trap.
 
@@ -106,5 +106,5 @@ the two substrate daemons need a real mechanism:
 - **Quartermaster:** a benchmark harness with known-correct targets and actual
   measurement, or "faster recall" is just a mood.
 
-Teacher and Sentinel work as pure directives — they fire on events already in front
+Teacher and Skeptic work as pure directives — they fire on events already in front
 of you. The other two are load-bearing — wire them to something real.

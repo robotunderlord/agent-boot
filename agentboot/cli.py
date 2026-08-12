@@ -5,7 +5,7 @@ python3 -m agentboot install --prove  -- also confirm each check is capable of f
 python3 -m agentboot verify           -- check only, change nothing
 python3 -m agentboot uninstall        -- remove only what this installed
 python3 -m agentboot demo             -- run a boot against the installed payloads
-python3 -m agentboot posture --persona sentinel  -- print a posture block
+python3 -m agentboot posture --persona skeptic  -- print a posture block
 """
 from __future__ import annotations
 
@@ -98,7 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--payload-dir", help="override ~/.agentboot")
     ap.add_argument("--payloads", help="override the template source directory")
     ap.add_argument("--prove", action="store_true", help="also confirm every check can fail")
-    ap.add_argument("--persona", help="keep an avatar's posture resident every turn (e.g. sentinel)")
+    ap.add_argument("--persona", help="keep an avatar's posture resident every turn (e.g. skeptic)")
     ap.add_argument("--avatars", help="override the avatar source directory")
     args = ap.parse_args(argv)
 

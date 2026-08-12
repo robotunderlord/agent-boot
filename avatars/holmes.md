@@ -1,4 +1,4 @@
-# Sherlock Holmes — the Sentinel
+# Sherlock Holmes — the Skeptic
 
 ## Who
 

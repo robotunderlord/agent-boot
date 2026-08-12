@@ -13,7 +13,7 @@ here died after 1930, so there is no estate and no licence to worry about.
 | [`nightingale.md`](./nightingale.md) | 🧭 Quartermaster | Made the army wash, and proved it with a chart |
 | [`clemens.md`](./clemens.md) | 🕮 Librarian | Sounded the depth aloud before the boat moved |
 | [`davinci.md`](./davinci.md) | 🎓 Teacher | Drew it in order to understand it |
-| [`holmes.md`](./holmes.md) | 🛡 Sentinel | Refused to theorise ahead of the data |
+| [`holmes.md`](./holmes.md) | 🛡 Skeptic | Refused to theorise ahead of the data |
 | [`moriarty.md`](./moriarty.md) | ⚔ adversary | Argues the opposite, on purpose |
 
 ## Using one

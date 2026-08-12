@@ -123,7 +123,7 @@ class TheShippedAvatarsAllLoad(unittest.TestCase):
         """You ask for the discipline you need, not the historical figure's surname."""
         wardrobe = Wardrobe()
         wardrobe.load(AVATARS)
-        self.assertIsNotNone(wardrobe.get("sentinel"))
+        self.assertIsNotNone(wardrobe.get("skeptic"))
         self.assertIsNotNone(wardrobe.get("adversary"))
         self.assertIsNone(wardrobe.get("nobody-by-that-name"))
 

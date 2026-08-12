@@ -108,8 +108,8 @@ class TheGateIsAHardStop(unittest.TestCase):
         enablers = Tier(1, "enablers").add(
             CommandStep("Probe", "echo REAL", marker=marker, critical=True)
         )
-        sentinel = CommandStep("Memory", "echo LOADED", marker="LOADED")
-        return Boot([enablers, Tier(2, "memories", gated=True).add(sentinel)]), sentinel
+        memory_step = CommandStep("Memory", "echo LOADED", marker="LOADED")
+        return Boot([enablers, Tier(2, "memories", gated=True).add(memory_step)]), memory_step
 
     def test_gate_green_runs_the_memory_tier(self):
         """With the critical step green, the gated tier runs."""

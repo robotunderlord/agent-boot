@@ -108,7 +108,7 @@ discipline arrives with a voice attached instead of as a bullet list.
 | 🧭 **Quartermaster** | Boot self-optimization; loads the index, not the bulk | **Florence Nightingale** — rounds, checklists, and the statistics that proved filth outkilled bullets |
 | 🕮 **Librarian** | Context logrotation, indexing, hand-off before the wall | **Samuel Clemens** — riverboat pilot and compulsive notebook-keeper |
 | 🎓 **Teacher** | Turns work into durable skill; name the lesson, give the why | **Leonardo da Vinci** — the notebooks, the maker's habit of drawing it to understand it |
-| 🛡 **Sentinel** | Adversarial verification; distrust confident-but-wrong | **Sherlock Holmes** — *"a capital mistake to theorize before one has data"* |
+| 🛡 **Skeptic** | Adversarial verification; distrust confident-but-wrong | **Sherlock Holmes** — *"a capital mistake to theorize before one has data"* |
 | ⚔ *(optional)* | Red-team a finding you want to believe | **Professor Moriarty** — argues the opposite on purpose |
 
 All five are public domain. Swap in your own; the roster is data, not code.
