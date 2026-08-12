@@ -63,6 +63,20 @@ LAYERS: tuple[Layer, ...] = (
           "Before this action...", matcher="Bash|Edit|Write", preserve_local=True),
 )
 
+# The optional fourth layer: DISPOSITION.
+#
+# Two agents holding identical doctrine can perform completely differently, and the difference is
+# detection latency - one catches the mistake at step 0, the other is five steps past it before
+# anything registers. Five steps past is qualitatively worse, not merely later: the honest fix by
+# then is to unwind, unwinding is expensive, so the agent patches forward and builds a bandaid
+# beside the mechanism that was already correct.
+#
+# Disposition is what closes that distance, and it cannot be looked up on demand - by the time you
+# think to consult it you have already acted. So it is kept resident on every turn, alongside the
+# nag, carrying the self-check tells that can fire while an action is still in flight.
+POSTURE_LAYER = Layer("UserPromptSubmit", "posture.md", "--- POSTURE:",
+                      "Holding posture...", preserve_local=True)
+
 
 class EnforcementInstaller:
     """Install, verify and remove the three-layer hook wiring for an agent.
@@ -72,11 +86,13 @@ class EnforcementInstaller:
     back upstream.
     """
 
-    def __init__(self, claude_dir: Path, payload_dir: Path, payload_src: Path) -> None:
-        """Store the settings directory, the payload destination, and where templates come from."""
+    def __init__(self, claude_dir: Path, payload_dir: Path, payload_src: Path,
+                 layers: tuple[Layer, ...] = LAYERS) -> None:
+        """Store the settings dir, payload destination, template source, and which layers to wire."""
         self.claude_dir = Path(claude_dir)
         self.payload_dir = Path(payload_dir)
         self.payload_src = Path(payload_src)
+        self.layers = tuple(layers)
         self.settings = self.claude_dir / "settings.json"
         self.results: list[Result] = []
 
@@ -84,13 +100,16 @@ class EnforcementInstaller:
     def install_payloads(self) -> None:
         """Copy each template into place, leaving any operator-edited file untouched."""
         self.payload_dir.mkdir(parents=True, exist_ok=True)
-        for layer in LAYERS:
+        for layer in self.layers:
             src, dst = self.payload_src / layer.payload, self.payload_dir / layer.payload
-            if not src.exists():
-                self._record(layer.payload, Status.FAIL, f"template missing: {src}")
-                continue
+            # Destination first, deliberately. A payload the operator already has wins regardless of
+            # whether a template exists - some payloads (posture.md) are GENERATED rather than
+            # shipped, so demanding a template for them reports a failure that is not one.
             if dst.exists() and layer.preserve_local:
                 self._record(layer.payload, Status.OK, "already present - left alone (holds local edits)")
+                continue
+            if not src.exists():
+                self._record(layer.payload, Status.FAIL, f"template missing: {src}")
                 continue
             shutil.copyfile(src, dst)
             self._record(layer.payload, Status.OK, f"{dst} ({dst.stat().st_size} b)")
@@ -128,7 +147,7 @@ class EnforcementInstaller:
         """Merge the three layers into the existing settings, preserving every foreign hook."""
         data = self._read_settings()
         hooks = data.setdefault("hooks", {})
-        for layer in LAYERS:
+        for layer in self.layers:
             arr = hooks.setdefault(layer.event, [])
             arr[:] = [e for e in arr if not self._is_ours(e, layer)]
             foreign = len(arr)
@@ -148,14 +167,14 @@ class EnforcementInstaller:
     def steps(self) -> list[CommandStep]:
         """Return a `CommandStep` per layer, so verification runs through the same evidence rule."""
         return [CommandStep(layer.event, self.command_for(layer), marker=layer.marker, critical=True)
-                for layer in LAYERS]
+                for layer in self.layers]
 
     def verify(self) -> bool:
         """Execute every hook command and confirm its marker appears. Returns True when all green."""
         data = self._read_settings()
         hooks = data.get("hooks", {})
         green = True
-        for layer, step in zip(LAYERS, self.steps(), strict=True):
+        for layer, step in zip(self.layers, self.steps(), strict=True):
             if not any(self._is_ours(e, layer) for e in hooks.get(layer.event, [])):
                 self._record(layer.event, Status.FAIL, "NOT wired in settings.json")
                 green = False
@@ -179,7 +198,7 @@ class EnforcementInstaller:
         """Remove only the hook entries this installer wrote, leaving payloads and foreign hooks."""
         data = self._read_settings()
         hooks = data.get("hooks", {})
-        for layer in LAYERS:
+        for layer in self.layers:
             arr = hooks.get(layer.event, [])
             before = len(arr)
             arr[:] = [e for e in arr if not self._is_ours(e, layer)]
