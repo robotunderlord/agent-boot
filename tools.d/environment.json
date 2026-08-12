@@ -1,0 +1,46 @@
+{
+  "//": [
+    "How an environment tells the agent what it has.",
+    "",
+    "The image cannot know that THIS seat has a vector store, a credential CLI or a browser grid.",
+    "So the environment declares them here and the boot discovers them at start - then PROBES each",
+    "one before letting the agent believe it. A tool that fails its probe is dropped from the reflex",
+    "table rather than left as a lure toward something that is gone.",
+    "",
+    "The field that matters is `when`. A registry keyed by tool name answers 'what do I have'; a",
+    "registry keyed by SITUATION answers 'what do I do now', which is the only question an agent",
+    "actually asks. An entry without a `when` is rejected at load.",
+    "",
+    "`trap` is the tempting wrong move the tool replaces. Naming it is what stops the agent doing",
+    "the wrong thing faster.",
+    "",
+    "This file is an EXAMPLE. Replace the entries with your own; nothing here is required."
+  ],
+
+  "tools": [
+    {
+      "name": "ripgrep",
+      "when": "searching many files for a string",
+      "reach": "rg -n '<pattern>' <path>",
+      "probe": "rg --version",
+      "marker": "ripgrep",
+      "trap": "recursive grep over a whole tree, or reading files one at a time to look for it"
+    },
+    {
+      "name": "jq",
+      "when": "reading one field out of a JSON response",
+      "reach": "jq -r '.field' <file>",
+      "probe": "jq --version",
+      "marker": "jq",
+      "trap": "dumping the whole object and reading past the rest - which is how a neighbouring secret leaks"
+    },
+    {
+      "name": "git",
+      "when": "asking what actually changed, or whether you have been here before",
+      "reach": "git log --oneline -20 -- <path>",
+      "probe": "git --version",
+      "marker": "git version",
+      "trap": "assuming the current state is the intended state"
+    }
+  ]
+}

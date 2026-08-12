@@ -1,0 +1,66 @@
+# agent-boot — the can's internals.
+#
+# WHAT THIS DEMONSTRATES, AND WHAT IT DELIBERATELY DOES NOT
+# ---------------------------------------------------------
+# agent-boot itself has NO runtime dependencies — pure standard library. So this compose is not
+# here to install it; it is here to show the one structural idea that makes a containerised agent
+# work at all:
+#
+#     THE IMAGE IS THE VESSEL. THE MOUNTS ARE THE BEING.
+#
+# The image carries code and doctrine templates. It carries NO secrets, NO memory and NO local
+# rules. Everything that makes a particular agent *that* agent is mounted in at runtime, which is
+# what lets one image serve every seat and lets a seat survive being rebuilt.
+#
+# Three mounts, three jobs:
+#
+#   ~/.claude      settings.json (the three hook layers) + memory namespace   rw — it writes here
+#   ~/.agentboot   nag.md · nag-terse.md · tattoo.md — the operator's own      rw — the tattoo is live state
+#   tools.d/       JSON manifests declaring what THIS environment offers      ro — discovery input
+#
+# The third is the interesting one. The image cannot know that this particular seat has a vector
+# store, or a credential CLI, or a browser grid. Hardcoding those makes the image unportable, and
+# omitting them makes the agent blind to its own environment. So the environment DECLARES them in
+# tools.d and the boot DISCOVERS them — and then probes every one before letting the agent believe
+# it has them (see agentboot/tools.py).
+#
+# There are no sidecars here on purpose. A compose full of services that this repo does not need
+# would be aspirational, and an aspirational compose is a lie that takes an afternoon to discover.
+# Add your own; the discovery contract is the JSON manifest, not a service name.
+
+services:
+  agent:
+    build: .
+    image: agent-boot:0.2.0
+    container_name: agent-boot
+    init: true
+    restart: unless-stopped
+
+    environment:
+      # os.pathsep-separated manifest paths, read at boot by ToolRegistry.discover().
+      AGENTBOOT_TOOLS: /run/tools.d/environment.json
+      CLAUDE_DIR: /home/agent/.claude
+      AGENTBOOT_DIR: /home/agent/.agentboot
+
+    volumes:
+      # --- the being: mounted, never baked ---
+      - ${AGENT_STATE:-./state}/claude:/home/agent/.claude:rw
+      - ${AGENT_STATE:-./state}/agentboot:/home/agent/.agentboot:rw
+      # --- what this environment offers (read-only: the agent discovers, it does not edit) ---
+      - ./tools.d:/run/tools.d:ro
+
+    # Prove the wiring at start rather than trusting it. If a hook is not actually firing, the
+    # container must fail loudly here — not silently come up as a body with no mind.
+    command: ["python3", "-m", "agentboot", "install", "--prove"]
+
+    healthcheck:
+      # `verify` executes each hook command and greps for its marker. Configured is not working.
+      test: ["CMD", "python3", "-m", "agentboot", "verify"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 10s
+
+# The state directory is a bind mount by default so it is trivially backup-able and inspectable
+# from the host. Point AGENT_STATE at a real backed-up path in production — the tattoo and the
+# memory namespace live there, and they are the only things that cannot be rebuilt.

@@ -1,25 +1,22 @@
 # ══════════════════════════════════════════════════════════════════════════════
-# lint — "Lint"   [UNIFORM SERVICE PIPELINE STANDARD]
+# lint — "Lint"
 # ══════════════════════════════════════════════════════════════════════════════
-# gandalf-core lives primarily on github, so this github-hosted mirror fires on
-# every push and backs the README lint/ruff/pydocstyle badges immediately (no LAN
-# runner needed). The CANONICAL gate is the central `validate` reusable, imported
-# by .forgejo/workflows/lint.yml (yamllint + ruff + pydocstyle + gitleaks). That
-# reusable is forgejo-only, so it cannot be `uses:`-called from github — this
-# mirror runs the same ruff + pydocstyle steps directly to keep github status green.
-# TODO(path mismatch): unify once a github-hosted mirror of forge-workflows exists.
+# Public repo, github-hosted. Runs ruff + pydocstyle on every push so the badge
+# reflects the tree anyone can clone. agent-boot has no runtime dependencies, so
+# there is nothing to install but the linters themselves.
 name: lint
 run-name: "Lint"
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 concurrency:
-  group: gandalf-core-lint-${{ github.ref }}
+  group: agent-boot-lint-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -42,4 +39,7 @@ jobs:
         run: ruff check .
 
       - name: pydocstyle
-        run: pydocstyle --convention=pep257 port/
+        run: pydocstyle --convention=pep257 agentboot/ port/
+
+      - name: self-test - the boot must refuse to fake a pass
+        run: python3 -m unittest discover -s tests -v
