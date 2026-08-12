@@ -1,30 +1,38 @@
 // The holding layout — ONE session, and it IS the main loop.
 //
-// This layout is the single place that decides what the main loop actually runs. `SessionHost`
-// deliberately does not know: it starts the session and probes that it is alive, and what lives
-// inside is this file's business.
-//
 //   start:   zellij --layout <this file> --session main
 //   reach:   zellij attach main
-//   remote:  docker exec -it <container> zellij attach main
+//   remote:  ssh -t <host> docker exec -it <container> zellij attach main
 //
 // WHY A SESSION AND NOT JUST A PROCESS
 // The agent must not die when the connection does. Inside a session it survives detach, a dropped
 // VPN, a closed laptop, a reboot of YOUR machine — none of those are events in its life. The way in
-// becomes interchangeable, which is the property that makes remote access safe to lose.
+// becomes interchangeable, which is what makes losing remote access survivable.
 //
-// ONE session. A second one is a second AGENT with its own idea of where the work stands, both
-// writing the same running thread — a split brain with no merge. Bounded side-work goes to a minion
-// (see agentboot/minion.py): one errand, a generated brief, a result handed back here.
+// ONE session. A second is a second AGENT with its own idea of where the work stands, both writing
+// the same running thread — a split brain with no merge. Bounded side-work goes to a minion.
+//
+// LANDMINE, PAID FOR (2026-08-12): `name` is a PROPERTY of the pane node, not a child node.
+// Writing it as a child —
+//     pane command="bash" {
+//         name "main loop"        // <-- parse error
+//     }
+// — makes zellij fail to build the layout, and what it prints is `There is no active session!`,
+// which reads as "the multiplexer is broken" rather than "your layout does not parse". The whole
+// container looked unstartable for three rounds because of one misplaced word. A layout is code;
+// when it fails, suspect it before suspecting the runtime.
 
 layout {
-    // The main loop. Replace the command with your agent's entrypoint.
+    // The main loop. Point AGENT_MAIN_LOOP at your agent's entrypoint.
     //
-    // The `exec` matters: without it the shell stays as the pane's process and the agent becomes a
-    // child, so a crash leaves you looking at a live shell in a pane whose agent is gone — a green
-    // light wired to nothing, in pane form.
-    pane command="bash" {
-        args "-lc" "exec ${AGENT_MAIN_LOOP:-bash}"
-        name "main loop"
+    // `-c`, NOT `-lc`. A LOGIN shell re-sources /etc/profile and rebuilds PATH from scratch, which
+    // discards anything the image put there — measured: the venv vanished and the agent came up
+    // with "No module named agentboot".
+    //
+    // `exec` matters too: without it the shell stays as the pane's process and the agent is merely
+    // its child, so a crash leaves a live shell in a pane whose agent is gone — a green light wired
+    // to nothing, in pane form.
+    pane name="main loop" command="bash" {
+        args "-c" "exec ${AGENT_MAIN_LOOP:-bash}"
     }
 }

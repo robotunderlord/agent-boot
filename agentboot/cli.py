@@ -25,7 +25,7 @@ from .steps import FileStep, LazyStep
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = REPO_ROOT / "examples"
-DEFAULT_PAYLOADS = EXAMPLES / "payloads"
+DEFAULT_PAYLOADS = Path(__file__).resolve().parent / "templates"
 DEFAULT_AVATARS = EXAMPLES / "avatars"
 CURRICULUM = REPO_ROOT / "curriculum"
 

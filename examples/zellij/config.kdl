@@ -1,32 +1,52 @@
-// Zellij config for a containerised agent.
+// Zellij config for a containerised agent — pre-canned, so nothing ever waits on a keystroke.
 //
-// Four settings here are load-bearing. The rest of zellij's defaults are fine.
+// THE ONE THAT COST A BUILD ROUND
+// zellij 0.44 runs a "First Run Setup Wizard" when it finds no config, asking which keybinding
+// style you prefer. In a detached container nobody answers it: the session comes up blocked on a
+// prompt nobody can see, and it presents as "the agent will not start". The mere EXISTENCE of this
+// file is most of the fix; the flags below make it explicit rather than incidental.
 
-theme "ember"
+// ── nothing interactive, ever ───────────────────────────────────────────────────────────────────
+show_startup_tips false          // no first-run tips pane
+show_release_notes false         // no "what's new" on version bump
+default_mode "normal"            // answer the wizard's question up front
 
-// THE ONE THAT MATTERS.
-//
-// Default behaviour on a force-close (Ctrl-C at the wrong moment, a terminal that dies, a dropped
-// connection that zellij notices) is to QUIT the session — which kills the agent inside it and
-// takes anything it had not yet written down.
-//
-// "detach" turns every one of those into a non-event: the session keeps running, you reattach, the
-// agent never knew. This single line is most of why the agent is isolated from the connection.
+// Load the holding layout by NAME from the layouts directory, rather than passing --layout <path>
+// on the command line. Measured 2026-08-12: `zellij --layout <path> --session main` fails in a
+// container - and it fails identically for a MINIMAL `layout { pane }`, so it is the flag, not the
+// layout. `zellij --session main` alone works. Name + layouts dir is the canonical path and it
+// removes a whole class of "the agent will not start".
+default_layout "main"
+attach_to_session false          // never silently join whatever session exists — there is ONE, named
+
+// ── survive the connection ──────────────────────────────────────────────────────────────────────
+// THE LOAD-BEARING LINE. Default behaviour on force-close (a terminal that dies, a dropped link
+// zellij notices) is to QUIT — killing the agent and anything it had not written down. "detach"
+// turns every one of those into a non-event: the session runs on, you reattach, the agent never
+// knew. This single setting is most of why the agent is isolated from the connection.
 on_force_close "detach"
 
-// Survive a container restart. With serialization on, a session that goes down comes back with its
-// panes rather than as a blank slate — the difference between resuming and starting over.
+// Survive a container restart: come back with panes rather than as a blank slate.
 session_serialization true
 serialize_pane_viewport true
+scrollback_lines_to_serialize 10000
 
-// Keep frames visible. When one bright frame marks the active pane, "where is it working" is a
-// glance rather than a question — see theme.kdl.
-pane_frames true
+// ── look ────────────────────────────────────────────────────────────────────────────────────────
+theme "ember"
+pane_frames true                 // one bright frame marks the active pane — see theme.kdl
+scroll_buffer_size 50000         // an agent working for hours out-scrolls a default buffer
+styled_underlines true
+mouse_mode true
 
-// Do not silently join whatever session happens to exist. There is exactly ONE holding session and
-// it is named; attaching to the wrong thing by default is how you end up with two agents writing the
-// same running thread.
-attach_to_session false
+ui {
+    pane_frames {
+        rounded_corners true
+        hide_session_name false  // the session name is the address; keep it on screen
+    }
+}
 
-// Copy out of the pane using the host clipboard when one is reachable; harmless when it is not.
+// ── clipboard ───────────────────────────────────────────────────────────────────────────────────
+// copy_on_select off deliberately: an agent's pane is full of output you did not mean to yank, and
+// silently replacing the operator's clipboard mid-task is a small betrayal that is hard to debug.
 copy_on_select false
+copy_clipboard "system"

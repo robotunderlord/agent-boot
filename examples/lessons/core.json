@@ -214,6 +214,58 @@
         "cron",
         "ci"
       ]
+    },
+    {
+      "id": "L-014",
+      "tell": "reading status, logs or output from a thing you just tried to (re)create - after a build, a deploy, or a `run` that may not have started",
+      "trade": "confirm the artifact you are reading is the one you just made. Check its identity or timestamp, not just its name. A failed build leaves the OLD image; a name collision leaves the OLD container.",
+      "scar": "Twice in one session: a build failed, the previous image ran instead, and its logs were read as the new behaviour. Then a container name was already taken, `run` refused, and the previous container's Exited status was read as the new one failing. Both times the conclusion was confident and about the wrong object.",
+      "cost": "two rounds of debugging a defect that had already been fixed",
+      "tags": [
+        "stale",
+        "logs",
+        "status",
+        "build",
+        "container",
+        "rebuild",
+        "cached",
+        "old"
+      ]
+    },
+    {
+      "id": "L-015",
+      "tell": "about to build an image from a directory that has a working tree in it",
+      "trade": "write a .dockerignore. Docker does NOT read .gitignore, so anything excluded from version control is still sent to the build and still lands in the image.",
+      "scar": "A developer virtualenv, untracked and excluded by .gitignore, was copied into the image with absolute host paths inside it. The build then failed with 'a virtual environment already exists', which reads as a tooling quirk and actually meant 'your laptop is inside the container now'. The loud failure was the lucky case; the quiet one ships host paths in a published image.",
+      "cost": "a build round, and nearly a leak",
+      "tags": [
+        "docker",
+        "dockerignore",
+        "gitignore",
+        "image",
+        "build",
+        "venv",
+        "copy",
+        "leak"
+      ]
+    },
+    {
+      "id": "L-016",
+      "tell": "an environment variable set in an image or service definition is missing at runtime - PATH, VIRTUAL_ENV, anything",
+      "trade": "check whether a LOGIN shell is involved. `bash -l` re-sources the system profile and rebuilds PATH from scratch, discarding what the image set. Use a non-login shell, or export it again from profile.d so both paths agree.",
+      "scar": "An image set PATH to put a venv first. Under `bash -lc` the venv was simply gone and the agent died on 'No module named ...'. Measured both ways: ENV PATH had the venv, the login shell did not. It would have bitten a second time the moment a human attached, because attaching gives you a login shell.",
+      "cost": "a container that would not start, diagnosed at the wrong layer",
+      "tags": [
+        "path",
+        "env",
+        "login",
+        "shell",
+        "profile",
+        "bash",
+        "venv",
+        "container",
+        "missing"
+      ]
     }
   ]
 }

@@ -3,6 +3,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from agentboot.keys import KeyFault, Keyring, KeyStep
 
@@ -44,7 +45,12 @@ class ThePasswordIsNeverCarried(unittest.TestCase):
     """The one bootstrap secret is mounted at runtime; a copy of the being alone opens nothing."""
 
     def test_missing_password_file_is_an_honest_failure(self):
-        """The error names the design, so the next reader does not go looking for a bug."""
+        """The error names the design, so the next reader does not go looking for a bug.
+
+        `shutil.which` is patched so this test exercises the PASSWORD branch regardless of whether
+        ansible-vault happens to be installed. Without the patch this passed on a developer host and
+        failed inside the container, which is a test that measures the machine rather than the code.
+        """
         with tempfile.TemporaryDirectory() as tmp:
             store = Path(tmp) / "store"
             store.mkdir()
@@ -52,9 +58,22 @@ class ThePasswordIsNeverCarried(unittest.TestCase):
             ring = Keyring(store, install_dir=Path(tmp) / "ssh",
                            password_file=Path(tmp) / "absent-pass")
             key = ring.keys()[0]
-            with self.assertRaises(KeyFault) as ctx:
-                ring._decrypt(key)
+            with mock.patch("agentboot.keys.shutil.which", return_value="/usr/bin/ansible-vault"):
+                with self.assertRaises(KeyFault) as ctx:
+                    ring._decrypt(key)
             self.assertIn("mounted at runtime", str(ctx.exception))
+
+    def test_missing_vault_binary_is_named_plainly(self):
+        """The other branch: with no ansible-vault, the store simply cannot be opened."""
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "store"
+            store.mkdir()
+            (store / "id_agent.vault").write_text("ciphertext", encoding="utf-8")
+            ring = Keyring(store, install_dir=Path(tmp) / "ssh")
+            with mock.patch("agentboot.keys.shutil.which", return_value=None):
+                with self.assertRaises(KeyFault) as ctx:
+                    ring._decrypt(ring.keys()[0])
+            self.assertIn("not installed", str(ctx.exception))
 
 
 @unittest.skipUnless(HAVE_SSH_KEYGEN, "ssh-keygen required to exercise the fingerprint gate")

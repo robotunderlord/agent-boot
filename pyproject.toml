@@ -1,16 +1,37 @@
 # agent-boot - a boot and enforcement framework for long-running AI agent instances.
 # Pure standard library: no dependencies, no build step, amd64 and arm64 alike.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "agent-boot"
 version = "0.2.0"          # 0.x.y = pre-production; 1.0.0 when it goes to production
 description = "Three hook layers and a gated boot that make an AI agent obey the doctrine it already knows."
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Eric Erdmann", email = "eric.erdmann79@gmail.com" }]
 keywords = ["ai-agent", "claude-code", "hooks", "boot", "verification"]
 
 [project.scripts]
 agent-boot = "agentboot.cli:main"
+
+# `agentboot` is the only PACKAGE. The other top-level directories are deliberately not importable:
+#   examples/ curriculum/ research/  are DATA - somebody's instances, read at runtime from the
+#                                    operator's own store, never imported
+#   port/                            standalone scripts, run directly
+#   tests/                           not shipped
+# Without this, setuptools finds four top-level directories in a flat layout and refuses to guess -
+# which is the correct behaviour, and the reason the first container build failed.
+[tool.setuptools]
+packages = ["agentboot"]
+
+# The three payload TEMPLATES ship inside the package, because they are class-shaped scaffolding
+# (a generic rule set plus a marked LOCAL RULES block), not somebody's instance. Without this a
+# pip-installed agent-boot has no templates to install and `install` fails on a path that only
+# resolves from a source checkout - which is exactly how the first container run failed.
+[tool.setuptools.package-data]
+agentboot = ["templates/*.md"]
 
 [tool.ruff]
 target-version = "py310"

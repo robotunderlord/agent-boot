@@ -1,0 +1,42 @@
+# Docker does NOT read .gitignore. Anything excluded there is still sent to the build and still
+# lands in the image unless it is named again HERE.
+#
+# This file exists because that bit: the repo's .gitignore excludes .venv, so a developer venv sat
+# untracked in the working tree - and `COPY . /opt/agent-boot` cheerfully copied it into the image,
+# absolute host paths and all. The build then failed with "a virtual environment already exists",
+# which reads as a uv quirk and is actually "your laptop is inside the container now".
+#
+# Two costs, and the quiet one is worse: the build breaks (loud, fixable), and host paths plus
+# whatever else is lying around untracked ship inside a published image (silent, permanent).
+
+# --- environments and caches -----------------------------------------------------------------
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# --- vcs and local state ---------------------------------------------------------------------
+.git/
+.gitignore
+.github/
+.forgejo/
+
+# --- editor / os noise -------------------------------------------------------------------------
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# --- nothing secret should exist here, but say so explicitly ----------------------------------
+# An image is published; a working tree is not. If any of these ever appear locally they must not
+# be the thing that discovers the difference.
+.env
+*.pem
+*.key
+!examples/**/*.kdl
+secrets/
+state/
