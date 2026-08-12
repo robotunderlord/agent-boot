@@ -39,6 +39,7 @@ from .session import MAIN, Session, SessionHost
 from .status import Status, StatusLine
 from .steps import CommandStep, Evidence, FileStep, LazyStep, Result, Step, StepFailed
 from .tools import Tool, ToolRegistry
+from .web import WebTerminal, WebTerminalRefused
 
 __version__ = "0.2.0"
 
@@ -74,6 +75,8 @@ __all__ = [
     "StepFailed",
     "Tier",
     "Tool",
+    "WebTerminal",
+    "WebTerminalRefused",
     "ToolRegistry",
     "__version__",
 ]

@@ -15,7 +15,7 @@ FROM python:3.12-slim
 # `cat` is what the three hook layers actually invoke, and coreutils ships in the base image.
 # git is here because the documented install path is "the agent clones this repo itself".
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates curl \
+ && apt-get install -y --no-install-recommends git ca-certificates curl openssl \
  && rm -rf /var/lib/apt/lists/*
 
 # --- the multiplexer that HOLDS the agent -------------------------------------------------------
@@ -40,6 +40,25 @@ RUN set -eu; \
     rm -f /tmp/zellij.tgz; \
     chmod 0755 /usr/local/bin/zellij; \
     zellij --version
+
+# --- ttyd: the browser terminal ------------------------------------------------------------------
+# Serves `zellij attach` over TLS so the agent is reachable by opening a URL. Static single-file
+# release binaries for both arches, same reasoning as zellij.
+#
+# It is NOT started unless a credential is supplied (see bin/entrypoint.sh). This is a WRITABLE
+# terminal onto a live session holding credentials and tools - it is a remote shell, and the safe
+# default for a remote shell is "off".
+ARG TTYD_VERSION=1.7.7
+RUN set -eu; \
+    case "${TARGETARCH:-amd64}" in \
+      amd64) arch="x86_64" ;; \
+      arm64) arch="aarch64" ;; \
+      *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /usr/local/bin/ttyd \
+      "https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.${arch}"; \
+    chmod 0755 /usr/local/bin/ttyd; \
+    ttyd --version
 
 # --- a non-root identity ------------------------------------------------------------------------
 # The agent runs as an unprivileged user. Its home is where the being gets mounted, so the uid must
@@ -124,5 +143,18 @@ ENV CLAUDE_DIR=/home/agent/.claude \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Default: wire the layers and prove they fire. Override in compose for a long-running agent.
-CMD ["python3", "-m", "agentboot", "install", "--prove"]
+# Set the exec bit HERE rather than relying on the file mode in the checkout. A build must not
+# depend on whether a contributor's filesystem happened to preserve +x - the failure is
+# `exec ... Permission denied` from tini, which reads as a container problem rather than a
+# forgotten chmod.
+RUN chmod 0755 /opt/agent-boot/bin/entrypoint.sh
+
+EXPOSE 7681
+
+# Prove the enforcement, open the door if one was configured, then hold the session.
+#
+# Everything the faculties need is BAKED, not installed at start: zellij, ttyd, ansible-vault, uv,
+# openssl, the venv. That is the whole performance argument for living in the can - a session that
+# has to install its environment first is a session that starts slow every single time, and the
+# install is a network dependency at exactly the moment you want the agent thinking.
+ENTRYPOINT ["/opt/agent-boot/bin/entrypoint.sh"]
