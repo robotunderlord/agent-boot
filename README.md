@@ -140,6 +140,58 @@ not code, and it lives in your store, not in this repo.
 > boat was allowed to move. A measurement taken before it is safe to proceed. That is this whole
 > repository in three words.
 
+## One session, and it IS the main loop
+
+The agent runs inside a named multiplexer session rather than as the container's foreground process
+or under `docker exec`. Both of those tie its existence to a connection — close the terminal, drop
+the VPN, reboot *your* laptop, and the agent dies mid-thought with whatever it had not written down.
+
+```
+container
+  |- zellij session "main"   <- the agent lives HERE, running whether or not anyone is attached
+  |- exec / ssh / attach     <- a WAY IN, not the thing it depends on
+```
+
+**One** session. A second is a second *agent*, with its own idea of where the work stands, both
+writing the same running thread — a split brain with no merge. Bounded side-work goes to a
+[minion](#) instead: one errand, a generated brief, a result handed back to the one loop.
+
+### Four addresses, one session
+
+```bash
+zellij attach main                                    # local
+docker exec -it agent-boot zellij attach main         # container
+ssh -t <host> zellij attach main                      # remote
+ssh -t <host> docker exec -it agent-boot zellij attach main
+
+python3 -m agentboot attach --session main --host <host> --container agent-boot
+```
+
+That last one renders the address *and* probes that the session is actually live.
+
+> **`ssh -t` and `docker exec -it` are not optional.** Without a forced TTY the attach renders
+> unusable garbage — which reads as *"the agent is broken"* when the agent is perfectly fine and you
+> simply did not give it a terminal. The diagnosis goes to entirely the wrong layer.
+
+### The trap this module exists for
+
+`zellij list-sessions` **prints dead sessions**, and `--short` strips the marker that distinguishes
+them:
+
+```
+$ zellij list-sessions --short
+agent-side       <- EXITED weeks ago
+agent-main       <- actually running
+```
+
+So `list-sessions --short | grep <name>` is a check that cannot fail, and it will report a dead agent
+as healthy. The probe uses `--no-formatting` and rejects anything marked `EXITED`. The listing is the
+indicator; the running session is the artifact.
+
+Colours live in [`examples/zellij/`](./examples/zellij) — a layout, a theme, and a config whose one
+load-bearing line is `on_force_close "detach"`, which turns every dropped connection into a
+non-event.
+
 ## Make your memory index SITUATION-shaped
 
 The most common cause of an agent re-deriving the same fact is not a missing note. It is a note that

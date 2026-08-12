@@ -18,6 +18,9 @@ that should trigger it, because the situation is the only thing an agent actuall
 * `persona` - disposition as a MECHANISM, loaded at tier 2 before the agent learns what it can
   reach. What separates two agents holding identical doctrine is detection latency: one catches the
   mistake at step 0, the other is five steps past it and patches forward rather than unwinding.
+* `session` - the agent runs inside ONE named multiplexer session, so its life is not the
+  connection's life: detach-survivable, reachable from four addresses, and probed for LIVENESS
+  rather than mere presence (a listed session can be long dead).
 * `keys` - the agent carries its own credentials as ciphertext and refuses to install any that
   cannot be fingerprinted, because a key that decrypts cleanly and has no fingerprint fails
   silently, hours later, looking like somebody else's problem.
@@ -32,6 +35,7 @@ from .keys import Key, KeyFault, Keyring
 from .lessons import Ledger, Lesson
 from .minion import Errand, Minion
 from .persona import Persona, Wardrobe
+from .session import MAIN, Session, SessionHost
 from .status import Status, StatusLine
 from .steps import CommandStep, Evidence, FileStep, LazyStep, Result, Step, StepFailed
 from .tools import Tool, ToolRegistry
@@ -60,7 +64,10 @@ __all__ = [
     "Minion",
     "Persona",
     "Wardrobe",
+    "MAIN",
     "Result",
+    "Session",
+    "SessionHost",
     "Status",
     "StatusLine",
     "Step",

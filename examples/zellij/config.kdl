@@ -1,0 +1,32 @@
+// Zellij config for a containerised agent.
+//
+// Four settings here are load-bearing. The rest of zellij's defaults are fine.
+
+theme "ember"
+
+// THE ONE THAT MATTERS.
+//
+// Default behaviour on a force-close (Ctrl-C at the wrong moment, a terminal that dies, a dropped
+// connection that zellij notices) is to QUIT the session — which kills the agent inside it and
+// takes anything it had not yet written down.
+//
+// "detach" turns every one of those into a non-event: the session keeps running, you reattach, the
+// agent never knew. This single line is most of why the agent is isolated from the connection.
+on_force_close "detach"
+
+// Survive a container restart. With serialization on, a session that goes down comes back with its
+// panes rather than as a blank slate — the difference between resuming and starting over.
+session_serialization true
+serialize_pane_viewport true
+
+// Keep frames visible. When one bright frame marks the active pane, "where is it working" is a
+// glance rather than a question — see theme.kdl.
+pane_frames true
+
+// Do not silently join whatever session happens to exist. There is exactly ONE holding session and
+// it is named; attaching to the wrong thing by default is how you end up with two agents writing the
+// same running thread.
+attach_to_session false
+
+// Copy out of the pane using the host clipboard when one is reachable; harmless when it is not.
+copy_on_select false

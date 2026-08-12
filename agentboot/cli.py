@@ -20,6 +20,7 @@ from .curriculum import Curriculum
 from .enforcement import LAYERS, POSTURE_LAYER, EnforcementInstaller
 from .intake import Intake, load_answers
 from .persona import Wardrobe
+from .session import Session, SessionHost
 from .steps import FileStep, LazyStep
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -214,8 +215,8 @@ def main(argv: list[str] | None = None) -> int:
     """Parse arguments and dispatch to the requested command."""
     ap = argparse.ArgumentParser(prog="agentboot", description=__doc__.split("\n")[0])
     ap.add_argument("command",
-                    choices=["init", "intake", "syllabus", "install", "verify",
-                             "uninstall", "demo", "posture"])
+                    choices=["init", "intake", "syllabus", "attach", "install",
+                             "verify", "uninstall", "demo", "posture"])
     ap.add_argument("--claude-dir", help="override ~/.claude")
     ap.add_argument("--payload-dir", help="override ~/.agentboot")
     ap.add_argument("--payloads", help="override the template source directory")
@@ -225,6 +226,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cooked", action="store_true",
                     help="init preloaded with the curriculum instead of blank")
     ap.add_argument("--answers", help="intake: a JSON file of answers to apply")
+    ap.add_argument("--session", default="main", help="holding session name (default: main)")
+    ap.add_argument("--container", help="attach: reach it through this container")
+    ap.add_argument("--host", help="attach: reach it through this ssh host")
     args = ap.parse_args(argv)
 
     if args.command == "init":
@@ -243,6 +247,13 @@ def main(argv: list[str] | None = None) -> int:
         if not written:
             print("[WARN] no answers applied - every field was blank, so nothing was written.")
         return 0
+
+    if args.command == "attach":
+        host = SessionHost(Session(name=args.session))
+        print(host.attach_command(container=args.container or "", host=args.host or ""))
+        result = host.step().run()
+        print(result.line().render())
+        return 0 if not result.status.is_red else 1
 
     if args.command == "syllabus":
         _, payloads = _dirs(args)

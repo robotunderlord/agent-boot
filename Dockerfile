@@ -15,8 +15,31 @@ FROM python:3.12-slim
 # `cat` is what the three hook layers actually invoke, and coreutils ships in the base image.
 # git is here because the documented install path is "the agent clones this repo itself".
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates \
+ && apt-get install -y --no-install-recommends git ca-certificates curl \
  && rm -rf /var/lib/apt/lists/*
+
+# --- the multiplexer that HOLDS the agent -------------------------------------------------------
+# The agent runs inside a zellij session rather than as the container's foreground process, so its
+# life is not the connection's life: detach, drop the VPN, close the laptop — none of those are
+# events in its life. See agentboot/session.py for the full argument and the EXITED landmine.
+#
+# Installed from the GitHub release rather than a distro package: the binary is current, static, and
+# published for both architectures, so the same Dockerfile builds on an Apple Silicon laptop and an
+# x86 server without a toolchain.
+ARG ZELLIJ_VERSION=v0.44.3
+ARG TARGETARCH
+RUN set -eu; \
+    case "${TARGETARCH:-amd64}" in \
+      amd64) target="x86_64-unknown-linux-musl" ;; \
+      arm64) target="aarch64-unknown-linux-musl" ;; \
+      *) echo "unsupported TARGETARCH=${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    curl -fsSL -o /tmp/zellij.tgz \
+      "https://github.com/zellij-org/zellij/releases/download/${ZELLIJ_VERSION}/zellij-${target}.tar.gz"; \
+    tar -xzf /tmp/zellij.tgz -C /usr/local/bin zellij; \
+    rm -f /tmp/zellij.tgz; \
+    chmod 0755 /usr/local/bin/zellij; \
+    zellij --version
 
 # --- a non-root identity ------------------------------------------------------------------------
 # The agent runs as an unprivileged user. Its home is where the being gets mounted, so the uid must

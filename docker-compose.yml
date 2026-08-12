@@ -41,6 +41,12 @@ services:
       AGENTBOOT_TOOLS: /run/tools.d/environment.json
       CLAUDE_DIR: /home/agent/.claude
       AGENTBOOT_DIR: /home/agent/.agentboot
+      # ONE session, and it IS the main loop. A second is a second AGENT writing the same running
+      # thread - a split brain with no merge. Bounded side-work goes to a minion instead.
+      AGENT_SESSION: main
+      # What the layout actually runs inside that session.
+      AGENT_MAIN_LOOP: bash
+      ZELLIJ_CONFIG_DIR: /home/agent/.agentboot/zellij
 
     volumes:
       # --- the being: mounted, never baked ---
@@ -49,18 +55,41 @@ services:
       # --- what this environment offers (read-only: the agent discovers, it does not edit) ---
       - ./tools.d:/run/tools.d:ro
 
-    # Prove the wiring at start rather than trusting it. If a hook is not actually firing, the
-    # container must fail loudly here — not silently come up as a body with no mind.
-    command: ["python3", "-m", "agentboot", "install", "--prove"]
+    # The agent runs INSIDE a named multiplexer session, not as this container's foreground process.
+    # That is what makes it detach-survivable: closing your terminal, dropping the VPN, or rebooting
+    # YOUR machine are not events in its life. See agentboot/session.py.
+    #
+    # Order matters. Prove the hooks fire BEFORE holding the session open - a container that comes up
+    # attachable but with no enforcement is a body with no mind, and it looks perfectly healthy.
+    command:
+      - bash
+      - -lc
+      - |
+        set -e
+        python3 -m agentboot install --prove
+        exec zellij --layout /opt/agent-boot/examples/zellij/main.kdl --session "${AGENT_SESSION:-main}"
 
     healthcheck:
-      # `verify` executes each hook command and greps for its marker. Configured is not working.
-      test: ["CMD", "python3", "-m", "agentboot", "verify"]
+      # Two different claims, and both are required:
+      #   verify  - the hooks still EXECUTE and emit their markers (configured is not working)
+      #   attach  - the holding session is LIVE, not merely listed (an exited session still prints)
+      test: ["CMD-SHELL",
+             "python3 -m agentboot verify && python3 -m agentboot attach --session ${AGENT_SESSION:-main}"]
       interval: 60s
       timeout: 15s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
+# REACHING IT - one session, four addresses. The way in is interchangeable precisely because the
+# agent does not depend on any of them:
+#
+#   local     docker exec -it agent-boot zellij attach main
+#   remote    ssh -t <host> docker exec -it agent-boot zellij attach main
+#   render    python3 -m agentboot attach --session main --host <host> --container agent-boot
+#
+# The -t / -it is NOT optional. Without a forced TTY the attach renders unusable garbage, which reads
+# as "the agent is broken" when the agent is fine and you simply did not give it a terminal.
+#
 # The state directory is a bind mount by default so it is trivially backup-able and inspectable
 # from the host. Point AGENT_STATE at a real backed-up path in production — the tattoo and the
 # memory namespace live there, and they are the only things that cannot be rebuilt.

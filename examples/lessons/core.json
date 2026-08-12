@@ -9,7 +9,6 @@
     "These are the generic ones. Add your own in another file in this directory; the loader reads",
     "every *.json here and skips anything malformed rather than taking the boot down."
   ],
-
   "lessons": [
     {
       "id": "L-001",
@@ -17,7 +16,13 @@
       "trade": "verify the ARTIFACT, not the indicator. Read the value back out of the thing you changed.",
       "scar": "A daemon reported active for fourteen days while synchronising with nothing at all. A write returned 200 and changed neither field it was given. A container reported Up for two hours while carrying none of its configuration.",
       "cost": "days of a fault hiding behind a green light",
-      "tags": ["verification", "status", "success", "green", "exit-code"]
+      "tags": [
+        "verification",
+        "status",
+        "success",
+        "green",
+        "exit-code"
+      ]
     },
     {
       "id": "L-002",
@@ -25,7 +30,14 @@
       "trade": "search the record first: existing docs, the repo's own breadcrumbs, prior commits, the filesystem. Half-built is the most common state of anything.",
       "scar": "An agent declared a build runner did not exist anywhere and proposed building one. It existed, registered and dormant, on the machine it was typing on.",
       "cost": "an evening rebuilding something already there",
-      "tags": ["exists", "missing", "build", "new", "absent", "search"]
+      "tags": [
+        "exists",
+        "missing",
+        "build",
+        "new",
+        "absent",
+        "search"
+      ]
     },
     {
       "id": "L-003",
@@ -33,7 +45,14 @@
       "trade": "normalise BOTH sides first (case, spaces vs hyphens, short name vs FQDN) or key the comparison on something machine-stable like an ID. A negative claim needs a WIDER probe than a positive one.",
       "scar": "Three of six devices reported missing from an inventory. All three were present; one system displayed a name with spaces and capitals, the other stored it slugified.",
       "cost": "false findings filed against a record that was already correct",
-      "tags": ["absence", "missing", "compare", "diff", "audit", "names"]
+      "tags": [
+        "absence",
+        "missing",
+        "compare",
+        "diff",
+        "audit",
+        "names"
+      ]
     },
     {
       "id": "L-004",
@@ -41,7 +60,15 @@
       "trade": "print the status code and the response body BEFORE narrowing your search. A REST write is atomic over the whole body - one invalid field kills the entire request, including the valid fields beside it.",
       "scar": "A description ran two characters over a max_length. The API rejected the whole request, so a perfectly valid label in the same object silently never landed either. The one-liner never printed the status code.",
       "cost": "hours debugging the wrong field",
-      "tags": ["write", "api", "rest", "patch", "post", "unchanged", "silent"]
+      "tags": [
+        "write",
+        "api",
+        "rest",
+        "patch",
+        "post",
+        "unchanged",
+        "silent"
+      ]
     },
     {
       "id": "L-005",
@@ -49,7 +76,16 @@
       "trade": "filter at the point of call, every time, even when confident it is clean. Name the single field you want rather than dumping the object and reading past the rest.",
       "scar": "A plain listing of git remotes printed a live access token straight into a durable transcript. The rule 'never print a secret' was resident and did not fire, because the command was not thought of as touching secrets at all.",
       "cost": "a credential leaked into a permanent log, and a rotation across dozens of repositories",
-      "tags": ["secret", "token", "credential", "print", "dump", "env", "inspect", "leak"]
+      "tags": [
+        "secret",
+        "token",
+        "credential",
+        "print",
+        "dump",
+        "env",
+        "inspect",
+        "leak"
+      ]
     },
     {
       "id": "L-006",
@@ -57,7 +93,14 @@
       "trade": "prove WHICH wall you are on before changing anything else. Read the error for what it QUOTES BACK, and probe each surface separately - identical messages routinely come from different layers.",
       "scar": "One error string turned out to be five different faults in sequence: a stale config file, an unfunded credential, a version mismatch, a silent identifier remapping, and a response-format mismatch. Nothing in the message distinguished them.",
       "cost": "an entire session of plausible fixes that each addressed the wrong layer",
-      "tags": ["error", "repeat", "same", "stuck", "message", "failing"]
+      "tags": [
+        "error",
+        "repeat",
+        "same",
+        "stuck",
+        "message",
+        "failing"
+      ]
     },
     {
       "id": "L-007",
@@ -65,7 +108,14 @@
       "trade": "instrument it. Log the real request - method, path, body - or point it at a debug listener. The instrumentation is cheaper than the round you were about to spend, every single time.",
       "scar": "Four consecutive plausible guesses about what a client was validating. All four wrong. A one-line request log answered it on the first run: it was a routing miss wearing a model error's clothes.",
       "cost": "four wasted change-restart-retest cycles",
-      "tags": ["guess", "protocol", "client", "debug", "retry", "unknown"]
+      "tags": [
+        "guess",
+        "protocol",
+        "client",
+        "debug",
+        "retry",
+        "unknown"
+      ]
     },
     {
       "id": "L-008",
@@ -73,7 +123,15 @@
       "trade": "verify the underlying DATA before acting on the tool's summary. Check the file exists and parses, hit the API directly, look at the process. A tool can lie while the data is perfectly fine.",
       "scar": "A benchmark reported zero documents and zero entities, prompting alarm and a proposed rebuild. The data file was intact and correct; the tool's output was stale from an earlier process.",
       "cost": "a nearly-triggered rebuild of a healthy store",
-      "tags": ["diagnostic", "tool", "zero", "failure", "report", "rebuild", "stale"]
+      "tags": [
+        "diagnostic",
+        "tool",
+        "zero",
+        "failure",
+        "report",
+        "rebuild",
+        "stale"
+      ]
     },
     {
       "id": "L-009",
@@ -81,7 +139,14 @@
       "trade": "state the blast radius and get an explicit OK first. On an appliance the supervisor's failure policy is often to restart the whole box, and the service name gives no hint of that.",
       "scar": "Restarting one userland process on a network appliance cascaded into a full device restart, dropping the network for a household and killing four working sessions. Access returned in fifteen seconds, which made it look transient - the uptime counter said otherwise.",
       "cost": "a household outage and four lost sessions",
-      "tags": ["restart", "appliance", "gateway", "switch", "service", "reboot"]
+      "tags": [
+        "restart",
+        "appliance",
+        "gateway",
+        "switch",
+        "service",
+        "reboot"
+      ]
     },
     {
       "id": "L-010",
@@ -89,7 +154,15 @@
       "trade": "write it down NOW, in the same breath as the work - indexed by the TELL, not the topic. Deferring to end of session means losing it, because a kill does not fire your cleanup.",
       "scar": "An agent burned an entire evening re-deriving three things that were already written down, then lost the lesson from that evening too, because it planned to record it at the end.",
       "cost": "the same evening, twice",
-      "tags": ["learned", "lesson", "record", "write", "document", "later", "remember"]
+      "tags": [
+        "learned",
+        "lesson",
+        "record",
+        "write",
+        "document",
+        "later",
+        "remember"
+      ]
     },
     {
       "id": "L-011",
@@ -97,7 +170,15 @@
       "trade": "make it fail on purpose, once, before trusting it. Feed it a known-bad input and watch it go red. If you cannot make it fail, you have not proved it works.",
       "scar": "An audit function defined and never called. A guard that loaded an override file that was never created. A process probe using a tool the image did not ship, reporting zero and declaring a live service dead. Every one reported success or silence; not one reported a failure.",
       "cost": "safeguards that were decorative for months",
-      "tags": ["check", "safeguard", "probe", "test", "guard", "cleanup", "passing"]
+      "tags": [
+        "check",
+        "safeguard",
+        "probe",
+        "test",
+        "guard",
+        "cleanup",
+        "passing"
+      ]
     },
     {
       "id": "L-012",
@@ -105,7 +186,34 @@
       "trade": "ask the right question with the right probe: reachable, listening and WORKING are three different claims. Speak the actual protocol.",
       "scar": "Two resolvers were called dead because they ignored ICMP; both were answering queries all day. Separately, an open port was read as readiness while the service behind it was still refusing every request.",
       "cost": "two wrong diagnoses issued mid-incident and retracted",
-      "tags": ["ping", "port", "up", "down", "reachable", "health", "probe"]
+      "tags": [
+        "ping",
+        "port",
+        "up",
+        "down",
+        "reachable",
+        "health",
+        "probe"
+      ]
+    },
+    {
+      "id": "L-013",
+      "tell": "about to run an interactive command non-interactively - over ssh, through docker exec, from a script, in CI, or under a scheduler",
+      "trade": "force a terminal (ssh -t, docker exec -it) or pick the non-interactive form of the tool. The environment a command runs in is part of the command.",
+      "scar": "A multiplexer attach issued over ssh without -t. It did not error usefully - it rendered unusable garbage, which reads as 'the agent is broken' rather than 'you did not give it a terminal'. The agent was perfectly fine the whole time; the diagnosis went to the wrong layer entirely.",
+      "cost": "debugging a healthy service",
+      "tags": [
+        "tty",
+        "ssh",
+        "docker",
+        "exec",
+        "interactive",
+        "attach",
+        "terminal",
+        "garbage",
+        "cron",
+        "ci"
+      ]
     }
   ]
 }
