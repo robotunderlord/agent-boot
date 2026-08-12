@@ -47,6 +47,17 @@ services:
       # What the layout actually runs inside that session.
       AGENT_MAIN_LOOP: bash
       ZELLIJ_CONFIG_DIR: /home/agent/.agentboot/zellij
+      # The KEYED tier: ~1ms find-by-key, no embedder, no model involved.
+      AGENT_MONGO_URL: mongodb://mongo:27017
+      AGENT_MONGO_DB: agent
+      # The browser terminal starts ONLY if a credential is supplied. Set it in an env file, never
+      # here - a password in a committed compose is a password in the repo's history forever.
+      # AGENT_WEB_CREDENTIAL: user:password    <- via `docker compose --env-file`
+      AGENT_WEB_WRITABLE: "false"
+
+    depends_on:
+      mongo:
+        condition: service_healthy
 
     volumes:
       # --- the being: mounted, never baked ---
@@ -54,6 +65,35 @@ services:
       - ${AGENT_STATE:-./state}/agentboot:/home/agent/.agentboot:rw
       # --- what this environment offers (read-only: the agent discovers, it does not edit) ---
       - ./tools.d:/run/tools.d:ro
+
+    ports:
+      - "${AGENT_WEB_PORT:-7681}:7681"
+
+  # ── the KEYED tier ────────────────────────────────────────────────────────────────────────────
+  # Deterministic recall: expand this crumb, what is X, what did I do in session S. A find-by-key,
+  # ~1ms, no embedding and no model in the path.
+  #
+  # NOT A VECTOR STORE, and it must not become one. Community MongoDB has no ANN index. The
+  # temptation is real because it is the database already sitting there; putting semantic search
+  # here produces something that answers slowly and confidently with the wrong neighbour.
+  mongo:
+    image: mongo:7
+    container_name: agent-mongo
+    restart: unless-stopped
+    volumes:
+      # STATE IS THE BEING. The vessel rebuilds from a Dockerfile; this does not rebuild from
+      # anything. Back it up OFF this box.
+      - agent_state:/data/db
+    healthcheck:
+      # Speak the protocol. A port being open says nothing about whether the database answers.
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  agent_state:      # his keyed memory — unversioned BEING, not vessel
 
     # The agent runs INSIDE a named multiplexer session, not as this container's foreground process.
     # That is what makes it detach-survivable: closing your terminal, dropping the VPN, or rebooting

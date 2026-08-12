@@ -36,6 +36,7 @@ from .lessons import Ledger, Lesson
 from .minion import Errand, Minion
 from .persona import Persona, Wardrobe
 from .session import MAIN, Session, SessionHost
+from .state import Crumb, KeyedState, StateUnavailable
 from .status import Status, StatusLine
 from .steps import CommandStep, Evidence, FileStep, LazyStep, Result, Step, StepFailed
 from .tools import Tool, ToolRegistry
@@ -47,6 +48,9 @@ __all__ = [
     "LAYERS",
     "Boot",
     "CommandStep",
+    "Crumb",
+    "KeyedState",
+    "StateUnavailable",
     "EnforcementInstaller",
     "Errand",
     "Curriculum",

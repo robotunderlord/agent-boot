@@ -91,7 +91,7 @@ COPY --chown=agent:agent . /opt/agent-boot
 ENV VIRTUAL_ENV=/opt/agent-boot/.venv
 ENV PATH="/opt/agent-boot/.venv/bin:${PATH}"
 RUN uv venv "${VIRTUAL_ENV}" \
- && uv pip install --no-cache ansible-core \
+ && uv pip install --no-cache ansible-core pymongo \
  && uv pip install --no-cache --no-deps . \
  && chown -R agent:agent "${VIRTUAL_ENV}" \
  && python3 -c "import agentboot; print('agentboot', agentboot.__version__)" \
