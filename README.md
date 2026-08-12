@@ -10,8 +10,30 @@ arm64, Linux or macOS. The agent can install it for itself.
 ```bash
 git clone https://github.com/robotunderlord/agent-boot
 cd agent-boot
-python3 -m agentboot install --prove
+python3 -m agentboot init            # scaffold YOUR store - empty on purpose
+python3 -m agentboot install --prove # wire the hooks, then prove they fire
 ```
+
+---
+
+## This is a class, not an inheritance
+
+Everything under `examples/` is somebody else's. Twelve lessons, five avatars, a set of nag
+templates — those are *instances*. The package is the **class**: the ability to hold lessons,
+personas and tools, and the discipline for writing good ones.
+
+`init` deliberately scaffolds you an **empty** ledger and wardrobe with the shape documented and no
+content. That is not laziness, it is the point:
+
+> **A lesson is only worth anything because of the scar behind it, and you did not earn someone
+> else's scars.** Inherited, a rule gets obeyed where it does not apply and abandoned where it does —
+> because the reason was never yours.
+
+Copy the shape from `examples/`. Do not copy the content. `Ledger.load()` and `Wardrobe.load()`
+default to *your* `~/.agentboot/`, never to this repository's.
+
+Same rule stated in one line: **teach the resource, not the object.** What transfers to a situation
+you have never seen is knowing how to find out. A specific answer is inert and rots.
 
 ---
 
@@ -100,7 +122,7 @@ fact instead of the fact* — which is what a long agent session reliably produc
 ## The forest — four daemons, and who plays them
 
 The disciplines are in **[`DAEMONS.md`](./DAEMONS.md)**. Each is a role, and each ships with a
-public-domain **avatar** in [`avatars/`](./avatars) — a personality file you can load so the
+public-domain **avatar** in [`examples/avatars/`](./examples/avatars) — a personality file you can load so the
 discipline arrives with a voice attached instead of as a bullet list.
 
 | Daemon | Job | Avatar |
@@ -111,7 +133,8 @@ discipline arrives with a voice attached instead of as a bullet list.
 | 🛡 **Skeptic** | Adversarial verification; distrust confident-but-wrong | **Sherlock Holmes** — *"a capital mistake to theorize before one has data"* |
 | ⚔ *(optional)* | Red-team a finding you want to believe | **Professor Moriarty** — argues the opposite on purpose |
 
-All five are public domain. Swap in your own; the roster is data, not code.
+All five are public domain - and all five are EXAMPLES. Pick your own; the roster is data,
+not code, and it lives in your store, not in this repo.
 
 > The name **Mark Twain** was a leadsman's call — *two fathoms, safe water* — sounded aloud before the
 > boat was allowed to move. A measurement taken before it is safe to proceed. That is this whole
@@ -160,6 +183,7 @@ preserved, and the file is backed up before every write.
 ## Commands
 
 ```
+python3 -m agentboot init                # scaffold YOUR empty ledger + wardrobe
 python3 -m agentboot install [--prove]   # wire the layers, verify by executing them
 python3 -m agentboot verify              # check only, change nothing
 python3 -m agentboot demo                # run a boot over the installed payloads

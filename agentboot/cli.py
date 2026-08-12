@@ -20,8 +20,9 @@ from .persona import Wardrobe
 from .steps import FileStep, LazyStep
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PAYLOADS = REPO_ROOT / "payloads"
-DEFAULT_AVATARS = REPO_ROOT / "avatars"
+EXAMPLES = REPO_ROOT / "examples"
+DEFAULT_PAYLOADS = EXAMPLES / "payloads"
+DEFAULT_AVATARS = EXAMPLES / "avatars"
 
 
 def _dirs(args: argparse.Namespace) -> tuple[Path, Path]:
@@ -73,6 +74,99 @@ def _demo_boot(payload_dir: Path) -> Boot:
     return Boot([enablers, personality, resources, memories])
 
 
+LESSON_HOWTO = """# Your ledger
+
+These lessons are YOURS. Nothing ships here with the package, and nothing you write here travels
+back upstream.
+
+That separation is the point. A lesson is only worth anything because of the scar behind it, and you
+did not earn someone else's scars - inheriting them gives you a rule you will obey where it does not
+apply and abandon where it does. `examples/lessons/` in the repo shows the SHAPE. Do not copy the
+content.
+
+## The shape
+
+    id     a stable handle, e.g. L-001
+    tell   HOW YOU RECOGNISE THE SITUATION     <- the index key; get this wrong and nothing fires
+    trade  what to do instead
+    scar   the incident that taught it
+    cost   what it actually cost, in units that motivate
+    tags   extra words to match on
+
+## The one rule that matters
+
+Write the `tell` as the situation you will be IN, not the topic it concerns.
+
+    BAD    "API pagination"
+    GOOD   "about to report a total from a list endpoint without checking for a next page"
+
+A ledger keyed by topic requires you to already know to look it up. Keyed by the tell, it fires on
+its own. That difference is the whole value.
+
+## Writing one
+
+Add any `*.json` file in this directory:
+
+    {"lessons": [
+      {"id": "L-001",
+       "tell":  "about to ...",
+       "trade": "instead, ...",
+       "scar":  "the time that ...",
+       "cost":  "an evening",
+       "tags":  ["..."]}
+    ]}
+
+Write it the moment it lands. Deferring to end of session loses it, because a kill does not fire
+your cleanup - and that is exactly when it matters most.
+"""
+
+AVATAR_HOWTO = """# Your avatars
+
+An avatar is a DISPOSITION you can load, not a biography. Keep four headings:
+
+    # Name - the Role
+
+    ## Who            one paragraph, so a reader knows why this voice
+    ## Why this one   what makes them fit THIS discipline
+    ## Posture        a bullet list        <- this is what actually loads
+    ## Tells          how you notice you have DRIFTED OUT of it
+
+`Posture` is required; a file without it is refused as decoration. `Tells` is the half that does the
+real work, because it can fire while an action is still in flight - the only place a self-check
+helps.
+
+Pick people who are genuinely dead and genuinely public domain, and pick your OWN. The examples in
+the repo are somebody else's choices; they will not mean to you what they meant to whoever chose
+them.
+"""
+
+
+def _init(payload_dir: Path) -> int:
+    """Scaffold the operator's own ledger and wardrobe - the shape, never the content.
+
+    This exists because the package is a CLASS, not an inheritance. Shipping a populated ledger
+    hands a new agent somebody else's history, which is knowledge; what actually transfers is the
+    ability to keep your own, which is education.
+    """
+    for sub, howto in (("lessons", LESSON_HOWTO), ("avatars", AVATAR_HOWTO)):
+        folder = payload_dir / sub
+        folder.mkdir(parents=True, exist_ok=True)
+        readme = folder / "README.md"
+        if readme.exists():
+            print(f"[ OK ] {sub:<10} already yours, left alone ({folder})")
+            continue
+        readme.write_text(howto, encoding="utf-8")
+        print(f"[ OK ] {sub:<10} scaffolded EMPTY at {folder}")
+
+    tools = payload_dir / "tools.d"
+    tools.mkdir(parents=True, exist_ok=True)
+    print(f"[ OK ] {'tools.d':<10} {tools}")
+    print()
+    print("Empty on purpose. The package gives you the ability to hold lessons, personas and tools;")
+    print("what goes in them is yours to earn. Copy the SHAPE from examples/, never the content.")
+    return 0
+
+
 def _write_posture(payload_dir: Path, wanted: str, avatars: Path) -> None:
     """Render the chosen avatar's posture into the payload the fourth hook layer reads."""
     wardrobe = Wardrobe()
@@ -93,7 +187,8 @@ def _write_posture(payload_dir: Path, wanted: str, avatars: Path) -> None:
 def main(argv: list[str] | None = None) -> int:
     """Parse arguments and dispatch to the requested command."""
     ap = argparse.ArgumentParser(prog="agentboot", description=__doc__.split("\n")[0])
-    ap.add_argument("command", choices=["install", "verify", "uninstall", "demo", "posture"])
+    ap.add_argument("command",
+                    choices=["init", "install", "verify", "uninstall", "demo", "posture"])
     ap.add_argument("--claude-dir", help="override ~/.claude")
     ap.add_argument("--payload-dir", help="override ~/.agentboot")
     ap.add_argument("--payloads", help="override the template source directory")
@@ -101,6 +196,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--persona", help="keep an avatar's posture resident every turn (e.g. skeptic)")
     ap.add_argument("--avatars", help="override the avatar source directory")
     args = ap.parse_args(argv)
+
+    if args.command == "init":
+        _, payloads = _dirs(args)
+        return _init(payloads)
 
     if args.command == "posture":
         wardrobe = Wardrobe()

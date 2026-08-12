@@ -139,7 +139,7 @@ class InstallerMergesRatherThanClobbers(unittest.TestCase):
                 "hooks": {"SessionStart": [{"hooks": [{"type": "command", "command": "echo FOREIGN"}]}]},
             }), encoding="utf-8")
 
-            src = Path(__file__).resolve().parents[1] / "payloads"
+            src = Path(__file__).resolve().parents[1] / "examples" / "payloads"
             EnforcementInstaller(claude, payloads, src).install_payloads()
             EnforcementInstaller(claude, payloads, src).wire()
 
@@ -155,7 +155,7 @@ class InstallerMergesRatherThanClobbers(unittest.TestCase):
             root = Path(tmp)
             claude, payloads = root / "claude", root / "payloads"
             claude.mkdir()
-            src = Path(__file__).resolve().parents[1] / "payloads"
+            src = Path(__file__).resolve().parents[1] / "examples" / "payloads"
             for _ in range(3):
                 inst = EnforcementInstaller(claude, payloads, src)
                 inst.install_payloads()
@@ -176,7 +176,7 @@ class LocalEditsSurviveUpgrades(unittest.TestCase):
             payloads.mkdir()
             mine = payloads / "nag.md"
             mine.write_text("MY LOCAL RULES", encoding="utf-8")
-            src = Path(__file__).resolve().parents[1] / "payloads"
+            src = Path(__file__).resolve().parents[1] / "examples" / "payloads"
             EnforcementInstaller(claude, payloads, src).install_payloads()
             self.assertEqual(mine.read_text(encoding="utf-8"), "MY LOCAL RULES")
 

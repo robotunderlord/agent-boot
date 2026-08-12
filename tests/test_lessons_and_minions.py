@@ -88,7 +88,7 @@ class TheShippedLedgerIsValid(unittest.TestCase):
     def test_core_lessons_load_and_are_distinct(self):
         """Every shipped lesson parses, and none duplicates another's tell."""
         ledger = Ledger()
-        loaded = ledger.load(Path(__file__).resolve().parents[1] / "lessons")
+        loaded = ledger.load(Path(__file__).resolve().parents[1] / "examples" / "lessons")
         self.assertGreaterEqual(len(loaded), 10)
         self.assertEqual(ledger.duplicate_tells(), [])
         self.assertTrue(all(lesson.scar for lesson in loaded), "every shipped lesson must carry its scar")

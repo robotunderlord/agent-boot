@@ -9,7 +9,7 @@ from pathlib import Path
 
 from agentboot.persona import Persona, PersonaStep, Wardrobe
 
-AVATARS = Path(__file__).resolve().parents[1] / "avatars"
+AVATARS = Path(__file__).resolve().parents[1] / "examples" / "avatars"
 
 GOOD = """# Ada Example - the Tester
 
