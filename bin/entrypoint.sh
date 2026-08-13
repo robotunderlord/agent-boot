@@ -20,6 +20,14 @@ AGENT_WEB_KEY="${AGENT_WEB_KEY:-/home/agent/.agentboot/tls/key.pem}"
 
 say() { printf '[entrypoint] %s\n' "$*"; }
 
+# HONOUR ARGUMENTS. `docker run <image> <cmd>` must run <cmd>, not silently ignore it and start the
+# agent anyway. An entrypoint that swallows its arguments makes the image un-inspectable: every
+# attempt to run a one-off command inside it appears to hang, because what actually happened is that
+# it launched a whole agent and the command was dropped on the floor. Cost a debugging round.
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
 # ── 1. enforcement, proven ───────────────────────────────────────────────────────────────────────
 python3 -m agentboot install --prove
 

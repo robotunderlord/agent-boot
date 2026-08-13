@@ -50,6 +50,13 @@ services:
       # The KEYED tier: ~1ms find-by-key, no embedder, no model involved.
       AGENT_MONGO_URL: mongodb://mongo:27017
       AGENT_MONGO_DB: agent
+      # The SEMANTIC tier: nearest-meaning over the vault. Embeddings are computed LOCALLY - the
+      # store refuses a remote embedder outright, because embedding a private corpus against a
+      # hosted endpoint exports the whole corpus, once, silently, and it does not look like an
+      # exfiltration in any log. Leave AGENT_EMBED_ENDPOINT unset, or point it at localhost.
+      AGENT_CORPUS: /vault
+      AGENT_RAG_STORE: /home/agent/.agentboot/rag
+      AGENT_RAG_COLLECTION: vault
       # The browser terminal starts ONLY if a credential is supplied. Set it in an env file, never
       # here - a password in a committed compose is a password in the repo's history forever.
       # AGENT_WEB_CREDENTIAL: user:password    <- via `docker compose --env-file`
@@ -65,6 +72,12 @@ services:
       - ${AGENT_STATE:-./state}/agentboot:/home/agent/.agentboot:rw
       # --- what this environment offers (read-only: the agent discovers, it does not edit) ---
       - ./tools.d:/run/tools.d:ro
+      # --- the corpus: the knowledge base he indexes, mounted READ-ONLY ---
+      # A Quartz/Obsidian-style markdown vault. Read-only on purpose: the agent INDEXES the vault,
+      # it does not edit it. That keeps the knowledge base a source rather than a scratchpad, and it
+      # means a bad index run can never damage the thing being indexed - which is what makes
+      # re-indexing a habit rather than an event.
+      - ${AGENT_VAULT:-./vault}:/vault:ro
 
     ports:
       - "${AGENT_WEB_PORT:-7681}:7681"

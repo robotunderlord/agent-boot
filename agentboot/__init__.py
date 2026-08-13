@@ -21,6 +21,9 @@ that should trigger it, because the situation is the only thing an agent actuall
 * `session` - the agent runs inside ONE named multiplexer session, so its life is not the
   connection's life: detach-survivable, reachable from four addresses, and probed for LIVENESS
   rather than mere presence (a listed session can be long dead).
+* `state` / `semantic` - two-speed recall. KEYED is a ~1ms find-by-key with no model in the path;
+  SEMANTIC is nearest-meaning over a private corpus, embedded LOCALLY and refusing a remote embedder
+  outright, because indexing against a hosted endpoint exports the whole corpus silently.
 * `keys` - the agent carries its own credentials as ciphertext and refuses to install any that
   cannot be fingerprinted, because a key that decrypts cleanly and has no fingerprint fails
   silently, hours later, looking like somebody else's problem.
@@ -35,6 +38,7 @@ from .keys import Key, KeyFault, Keyring
 from .lessons import Ledger, Lesson
 from .minion import Errand, Minion
 from .persona import Persona, Wardrobe
+from .semantic import Chunk, SemanticStore, SemanticUnavailable
 from .session import MAIN, Session, SessionHost
 from .state import Crumb, KeyedState, StateUnavailable
 from .status import Status, StatusLine
@@ -48,7 +52,10 @@ __all__ = [
     "LAYERS",
     "Boot",
     "CommandStep",
+    "Chunk",
     "Crumb",
+    "SemanticStore",
+    "SemanticUnavailable",
     "KeyedState",
     "StateUnavailable",
     "EnforcementInstaller",

@@ -91,11 +91,29 @@ COPY --chown=agent:agent . /opt/agent-boot
 ENV VIRTUAL_ENV=/opt/agent-boot/.venv
 ENV PATH="/opt/agent-boot/.venv/bin:${PATH}"
 RUN uv venv "${VIRTUAL_ENV}" \
- && uv pip install --no-cache ansible-core pymongo \
+ && uv pip install --no-cache ansible-core pymongo chromadb \
  && uv pip install --no-cache --no-deps . \
  && chown -R agent:agent "${VIRTUAL_ENV}" \
  && python3 -c "import agentboot; print('agentboot', agentboot.__version__)" \
  && command -v ansible-vault
+
+# --- bake the embedding model ---------------------------------------------------------------
+# MEASURED, not assumed: without this, the first semantic query downloads a 79.3 MB ONNX model at
+# RUNTIME. The probe still passed - because the bench happened to have network - which is precisely
+# the kind of green light that hides a defect until the day it matters.
+#
+# That is a network dependency at the exact moment the agent is trying to think, and in an offline
+# or air-gapped can it is simply a dead faculty. Pre-connected is the whole argument for living in
+# the container; a faculty that phones home on first use is not pre-connected.
+#
+# Downloaded as `agent` so it lands in the same cache the runtime user reads.
+USER agent
+RUN python3 -c "\
+from chromadb.utils import embedding_functions as ef; \
+e = ef.DefaultEmbeddingFunction(); \
+v = e(['bake the model at build time, not at first thought']); \
+print('embedder baked, dim', len(v[0]))"
+USER root
 
 # BELT AND SUSPENDERS FOR PATH - and this is not paranoia, it is a measured failure.
 #
