@@ -30,7 +30,7 @@ that should trigger it, because the situation is the only thing an agent actuall
 
 Nothing in this package knows about any particular environment. Steps are whatever you make them.
 """
-from .bench import Bench, Probe, Verdict
+from .bench import Bench, Probe, Thresholds, Verdict
 from .boot import Boot, Tier
 from .curriculum import Curriculum, Module
 from .dispatch import Dispatcher, Region, Route, Tier as SpendTier
@@ -95,6 +95,7 @@ __all__ = [
     "StatusLine",
     "Step",
     "StepFailed",
+    "Thresholds",
     "Tier",
     "Tool",
     "WebTerminal",

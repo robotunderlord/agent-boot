@@ -40,7 +40,7 @@ from __future__ import annotations
 import statistics
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 
 
@@ -58,10 +58,51 @@ class Verdict(Enum):
         return self is Verdict.FADING
 
 
-# Thresholds in milliseconds, taken from the measured gradient in research/EXP-003
-# (resident 0.1ms, keyed ~90ms, semantic ~1.9s, multi-hop ~4.4s).
-FAST_MS = 150.0
-WARM_MS = 2000.0
+@dataclass(frozen=True)
+class Thresholds:
+    """Where FAST ends and SLOW begins - CALIBRATED PER SEAT, never inherited.
+
+    The defaults come from one measured gradient (research/EXP-003: resident 0.1ms, keyed ~90ms,
+    semantic ~1.9s). They are a starting point and they are already wrong for at least one real
+    stack, including mine.
+
+    THE EVIDENCE THAT THESE MUST BE CALIBRATED: EXP-007 measured the same probe set with the tiers
+    living in-stack rather than across a network - keyed went 90ms -> 0.6ms. Against the inherited
+    thresholds, FOUR OF FIVE PROBES CAME BACK "FAST" and the bench lost all resolution. Every
+    answer looked equally good, so the instrument could no longer tell a reflex from a lookup, and
+    tuning against it would have been tuning against noise.
+
+    A threshold borrowed from someone else's hardware does not measure your seat. It measures
+    theirs, on your data, and reports the difference as if it were a verdict.
+    """
+
+    fast_ms: float = 150.0
+    warm_ms: float = 2000.0
+
+    def __post_init__(self) -> None:
+        """Reject thresholds that cannot separate the bands they name."""
+        if self.fast_ms <= 0 or self.warm_ms <= self.fast_ms:
+            raise ValueError(
+                f"thresholds must be ordered and positive (got fast={self.fast_ms}, "
+                f"warm={self.warm_ms}). A band that cannot be entered is a verdict never reported.")
+
+    @classmethod
+    def from_baseline(cls, medians: list[float], *, spread: float = 8.0) -> Thresholds:
+        """Derive thresholds from a seat's OWN measured baseline.
+
+        The fastest observed tier defines the floor: whatever is quickest HERE is what "reflexive"
+        means HERE. `spread` sets how many multiples of that floor still count as fast, and the
+        warm band is an order beyond it.
+
+        This deliberately produces different numbers on different hardware. That is the point - a
+        verdict is a statement about THIS seat, and a bench whose bands do not move with the
+        machine is reporting somebody else's architecture.
+        """
+        usable = [m for m in medians if m > 0]
+        if not usable:
+            return cls()
+        floor = min(usable)
+        return cls(fast_ms=max(floor * spread, 0.05), warm_ms=max(floor * spread * 10, 0.5))
 
 
 @dataclass(frozen=True)
@@ -98,15 +139,16 @@ class Result:
     tier: str = ""
     error: str = ""
     negate: bool = False
+    thresholds: Thresholds = field(default_factory=Thresholds)
 
     @property
     def verdict(self) -> Verdict:
         """Return the verdict, judged on the median rather than the best run."""
         if self.hits == 0:
             return Verdict.FADING
-        if self.median_ms < FAST_MS:
+        if self.median_ms < self.thresholds.fast_ms:
             return Verdict.FAST
-        if self.median_ms < WARM_MS:
+        if self.median_ms < self.thresholds.warm_ms:
             return Verdict.WARM
         return Verdict.SLOW
 
@@ -130,6 +172,7 @@ class Bench:
     probes: list[Probe] = field(default_factory=list)
     label: str = "unlabelled boot"
     results: list[Result] = field(default_factory=list)
+    thresholds: Thresholds = field(default_factory=Thresholds)
 
     def add(self, *probes: Probe) -> Bench:
         """Add probes and return self so a bench can be built fluently."""
@@ -159,8 +202,19 @@ class Bench:
                 found = probe.expect.lower() in answer.lower()
                 hits += 1 if (found != probe.negate) else 0
             self.results.append(Result(probe.name, hits, n, statistics.median(times),
-                                       probe.tier, error, probe.negate))
+                                       probe.tier, error, probe.negate, self.thresholds))
         return self.results
+
+    def calibrate(self, spread: float = 8.0) -> Thresholds:
+        """Re-derive thresholds from this run and re-grade it against the seat's own floor.
+
+        Run once on a healthy baseline, then keep the result. Re-calibrating on every run would
+        make every seat look identical and hide the very regressions the bench exists to catch -
+        the bands would chase the measurements instead of judging them.
+        """
+        self.thresholds = Thresholds.from_baseline([r.median_ms for r in self.results], spread=spread)
+        self.results = [replace(r, thresholds=self.thresholds) for r in self.results]
+        return self.thresholds
 
     # ── reporting ───────────────────────────────────────────────────────────────────────────
     def report(self) -> str:
