@@ -82,6 +82,27 @@ services:
     ports:
       - "${AGENT_WEB_PORT:-7681}:7681"
 
+  # ── DECIDED 2026-08-12: the keyed tier stays on the BRIDGE ────────────────────────────────────
+  #
+  # The alternative was `network_mode: "service:agent"` - mongo joining the agent's network
+  # namespace, binding 127.0.0.1, on no network at all. It was measured rather than argued:
+  #
+  #     TCP over docker bridge     0.429 ms per find-by-key   <- what this file does
+  #     loopback (shared netns)    0.368 ms
+  #
+  # 14%, not the 2-3x that would justify it. The real attraction was never speed: a shared namespace
+  # makes mongo unreachable by every other container on the host, which is a genuine reduction in
+  # attack surface.
+  #
+  # It loses on LIFECYCLE. A container joined to another's namespace dies with it - restart the
+  # agent and mongo must restart too. That is the exact opposite of the property this whole design
+  # is built around: the agent's life is not the connection's life, and its memory should outlive a
+  # restart of its mind.
+  #
+  # So: bridge, and pay the 0.06 ms. If the reachability concern matters more in your deployment
+  # than lifecycle independence, the swap is one line - but measure your own numbers first, because
+  # these are from one host on one day.
+  #
   # ── the KEYED tier ────────────────────────────────────────────────────────────────────────────
   # Deterministic recall: expand this crumb, what is X, what did I do in session S. A find-by-key,
   # ~1ms, no embedding and no model in the path.

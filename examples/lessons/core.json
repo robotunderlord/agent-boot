@@ -266,6 +266,24 @@
         "container",
         "missing"
       ]
+    },
+    {
+      "id": "L-017",
+      "tell": "about to rebuild an architecture because a different approach 'is faster' - sockets over TCP, in-process over service, cache over query",
+      "trade": "measure both first, on your own hardware, then decide. And name what you are actually buying: the speed number is often the weakest argument for the change you want to make.",
+      "scar": "Swapping a database onto a shared network namespace was expected to be a large win. Measured: 0.429ms to 0.368ms - 14%, on an operation already under a millisecond. The genuine benefit was reachability (the service became unreachable from every other container), not speed, and the cost was lifecycle coupling: the database would now die whenever the process it served restarted. The right call was to keep the slower path.",
+      "cost": "would have coupled two lifecycles for 0.06ms",
+      "tags": [
+        "performance",
+        "faster",
+        "optimize",
+        "socket",
+        "network",
+        "rebuild",
+        "architecture",
+        "benchmark",
+        "latency"
+      ]
     }
   ]
 }
