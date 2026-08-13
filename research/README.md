@@ -25,7 +25,7 @@ does still gains the capability.
 
 ## Status — read this before citing anything
 
-**Honest state: the index below is the map, and most of the territory is not written yet.** The
+**Honest state: two experiments are written in full; most of the theory is still a map.** The
 primary evidence currently lives in [`examples/lessons/core.json`](../examples/lessons/core.json),
 where twelve scars are recorded in compressed form — tell, trade, scar, cost.
 
@@ -47,11 +47,12 @@ which is precisely the defect this package exists to prevent. So the pointers ar
 | `theory/scars-steer-the-curriculum.md` | PLANNED | this file |
 | `experiments/EXP-001-doctrine-vs-enforcement.md` | PLANNED | see below |
 | `experiments/EXP-002-survey-of-a-working-agent.md` | PLANNED | see below |
-| `experiments/EXP-003-query-shape-and-speed.md` | PLANNED | — |
+| `experiments/EXP-003-recall-speed-gradient.md` | **WRITTEN** | four tiers, 0.1ms -> 4.4s |
 | `experiments/EXP-004-one-error-five-walls.md` | PLANNED | L-006 |
 | `experiments/EXP-005-absence-requires-a-wider-probe.md` | PLANNED | L-003 |
 | `runbooks/appliances-and-supervisors.md` | PLANNED | L-009 |
 | `runbooks/output-that-leaks-by-accident.md` | PLANNED | L-005 |
+| `experiments/EXP-006-context-beats-model-size.md` | **WRITTEN** | small+context >= large+none |
 
 ## The two experiments that produced this package
 

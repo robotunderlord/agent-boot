@@ -1,5 +1,28 @@
 """The main loop as a DISPATCHER: answer cheaply, escalate deliberately, spend nothing by default.
 
+THIS IS A NERVOUS SYSTEM, NOT A MIND
+------------------------------------
+The main loop should be plain to the point of being boring, and fast the way a reflex is fast -
+because a reflex does not deliberate, it responds. What makes it look intelligent is not the model
+in it; it is everything behind it. The measured recall gradient (research/EXP-003) reads exactly
+like one:
+
+    resident   0.1 ms    reflex      already there; nothing is retrieved
+    keyed      90 ms     autonomic   fast, involuntary retrieval
+    semantic   1.9 s     recall      deliberate remembering
+    multi-hop  4.4 s     reasoning   connecting what was never connected
+
+Four orders of magnitude between the ends. An agent that routes every question through the slowest
+tier is doing long division to answer "what is your name".
+
+AND THE SMALL BRAIN IS NOT A COMPROMISE
+---------------------------------------
+Measured, not assumed (research/EXP-006): a SMALL model with the right context matched or beat a
+LARGE model without it, at under half the tokens - while the large unprimed one cowboyed the errand
+and had to be stopped. Capability was never the binding constraint. Orientation was.
+
+So a tiny local model backed by good recall is the CORRECT choice here, not the cheap one.
+
 THE SHAPE
 ---------
 The main loop is not a big model. It is a router with a small one attached, and its job is to be
