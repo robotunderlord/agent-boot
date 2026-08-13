@@ -5,7 +5,7 @@ expensive one must require a stated reason, and deciding between them must itsel
 """
 import unittest
 
-from agentboot.dispatch import Dispatcher, DispatcherStep, Route, Tier
+from agentboot.dispatch import Dispatcher, DispatcherStep, Region, Route, Tier
 
 
 class AnEscalationMustJustifyItself(unittest.TestCase):
@@ -14,7 +14,7 @@ class AnEscalationMustJustifyItself(unittest.TestCase):
     def test_route_without_why_is_refused(self):
         """A route that cannot say why it chose its tier is refused at construction."""
         with self.assertRaises(ValueError):
-            Route(Tier.SPINE, "")
+            Route(Tier.CORTEX, "")
 
     def test_every_route_carries_a_reason(self):
         """Whatever the classifier decides, it explains."""
@@ -46,11 +46,11 @@ class TheCheapPathIsTheDefault(unittest.TestCase):
     def test_real_work_escalates(self):
         """Design and debugging are where a small brain genuinely underperforms."""
         for turn in ("design a migration plan", "why does the build fail?", "refactor this module"):
-            self.assertEqual(self.d.classify(turn).tier, Tier.SPINE, turn)
+            self.assertEqual(self.d.classify(turn).tier, Tier.CORTEX, turn)
 
     def test_a_recall_hit_does_not_suppress_real_work(self):
         """A memory hit must not stop genuine work reaching a brain that can do it."""
-        self.assertEqual(self.d.classify("design a new plan", recall_hit=True).tier, Tier.SPINE)
+        self.assertEqual(self.d.classify("design a new plan", recall_hit=True).tier, Tier.CORTEX)
 
 
 class ItWorksWithNoModelAtAll(unittest.TestCase):
@@ -88,7 +88,7 @@ class TheSpendIsAuditable(unittest.TestCase):
         d.dispatch("what is x?")
         d.dispatch("sure thing")
         d.dispatch("design a system")
-        self.assertEqual(d.spend_profile, {"RECALL": 1, "LOCAL": 1, "SPINE": 1})
+        self.assertEqual(d.spend_profile, {"RECALL": 1, "LOCAL": 1, "CORTEX": 1})
 
     def test_summary_reports_the_free_share(self):
         """The number that matters is what fraction never reached a metered brain."""
@@ -101,3 +101,46 @@ class TheSpendIsAuditable(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ThePrefrontalIsPluralAndRecruited(unittest.TestCase):
+    """A model is a REGION the agent recruits, not the thing the agent is."""
+
+    REGIONS = (
+        Region("triage", "haiku", "triage summarise classify quick", cost=1),
+        Region("bulk", "local-gpu", "bulk repetitive transform batch", cost=1),
+        Region("deep", "opus", "design architect refactor plan debug", cost=5),
+    )
+
+    def setUp(self):
+        """Build a dispatcher with a plural roster."""
+        self.d = Dispatcher(local_url="http://l/v1", spine_url="http://s/v1", regions=self.REGIONS)
+
+    def test_a_region_must_say_what_it_is_for(self):
+        """A roster with no stated purposes is a list, and a list gets used top-down."""
+        with self.assertRaises(ValueError):
+            Region("nameless", "m", "")
+
+    def test_design_work_recruits_the_deep_region_despite_its_cost(self):
+        """REGRESSION: substring matching sent everything to the cheapest region.
+
+        The word "a" in "design A migration plan" is a substring of "tri-A-ge", so every region
+        matched every turn and cost alone decided - which looks like thrift and is actually design
+        work being handed to a triage model. Whole-token overlap only.
+        """
+        self.assertEqual(self.d.classify("design a migration plan").region, "deep")
+
+    def test_bulk_work_recruits_the_cheap_local_region(self):
+        """Fit beats cost, but among fits the cheap one wins - that is the whole point."""
+        self.assertEqual(self.d.classify("implement a transform over the batch").region, "bulk")
+
+    def test_no_match_falls_back_to_cheapest_not_priciest(self):
+        """An unrecognised need must not default to the most expensive region."""
+        region = self.d.recruit("zzzz qqqq wwww")
+        self.assertIn(region.name, ("triage", "bulk"))
+
+    def test_no_roster_is_not_an_error(self):
+        """With no regions declared, escalation still routes over the default spine."""
+        d = Dispatcher(local_url="http://l/v1", spine_url="http://s/v1")
+        self.assertIsNone(d.recruit("anything"))
+        self.assertEqual(d.classify("design a system").tier, Tier.CORTEX)

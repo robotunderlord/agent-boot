@@ -1,5 +1,15 @@
 """The main loop as a DISPATCHER: answer cheaply, escalate deliberately, spend nothing by default.
 
+THE ANATOMY
+-----------
+    memory core     keyed + semantic recall        what he knows
+    main loop       this module - plain, instant   the NERVOUS SYSTEM, autonomic
+    the regions     haiku / opus / local / gemini  the PREFRONTAL CORTEX - the thoughts
+
+The agent is the persistent thing. A model is a REGION it recruits, not the thing it is - which is
+why the roster is plural, why regions are named for what they are FOR, and why losing one degrades
+a capability rather than ending a life.
+
 THIS IS A NERVOUS SYSTEM, NOT A MIND
 ------------------------------------
 The main loop should be plain to the point of being boring, and fast the way a reflex is fast -
@@ -30,7 +40,10 @@ conversationally instant while deciding what actually deserves a real brain:
 
     tier 0  RECALL    keyed lookup or semantic hit answers it       no model at all
     tier 1  LOCAL     a small CPU model, resident, free             no account
-    tier 2  SPINE     LiteLLM -> the heavy brains                   deliberate, reasoned, logged
+    tier 2  CORTEX    a recruited region, over the spine            deliberate, reasoned, logged
+
+The spine (LiteLLM) is the PATHWAY, not the thinking. Calling tier 2 "the spine" was a naming
+error worth correcting: nerves carry signals, they do not have thoughts.
 
 Most turns are tier 0 or 1. "What did I do last session", "expand that crumb", "what is X", an
 acknowledgement, a status question - none of those need a frontier model, and routing them to one
@@ -69,9 +82,35 @@ from .steps import Evidence, Step, StepFailed
 class Tier(IntEnum):
     """How expensive an answer was allowed to be. Lower is cheaper; cheapest sufficient wins."""
 
-    RECALL = 0      # no model touched
-    LOCAL = 1       # small resident model, no account
-    SPINE = 2       # the heavy brains, via LiteLLM
+    RECALL = 0      # no model touched - reflex
+    LOCAL = 1       # small resident model, no account - autonomic
+    CORTEX = 2      # a recruited prefrontal region, reached over the spine - a thought
+
+
+@dataclass(frozen=True)
+class Region:
+    """One recruitable prefrontal region: a model, and what kind of thinking it is FOR.
+
+    The prefrontal is PLURAL. It is not "the big model you fall back to" - it is a set of regions
+    recruited for different work, at different costs, potentially several at once. A cheap fast one
+    for triage, a deep one for design, local silicon for bulk, a different vendor for a second
+    opinion. Naming them by what they are FOR rather than by vendor is what makes that choosable:
+    "this needs careful reasoning" survives a model being renamed or replaced; "use opus" does not.
+    """
+
+    name: str
+    model: str
+    for_work: str
+    endpoint: str = ""      # empty = reached over the default spine
+    cost: int = 1           # relative, not currency - only the ordering is meaningful
+
+    def __post_init__(self) -> None:
+        """Refuse a region that cannot say what it is for."""
+        if not self.for_work.strip():
+            raise ValueError(
+                f"region {self.name!r} must say what kind of work it is FOR. A roster of models with "
+                "no stated purpose is not a choice, it is a list - and a list gets used top-down, "
+                "which means the most expensive entry answers everything.")
 
 
 # Shapes that recall answers better than any model - they want a FACT, not prose.
@@ -95,6 +134,7 @@ class Route:
     tier: Tier
     why: str
     model: str = ""
+    region: str = ""        # WHICH prefrontal region, when one was recruited
 
     def __post_init__(self) -> None:
         """Refuse a route that cannot justify itself."""
@@ -118,7 +158,32 @@ class Dispatcher:
     spine_url: str = field(default_factory=lambda: os.environ.get("AGENT_SPINE_URL", ""))
     spine_model: str = field(default_factory=lambda: os.environ.get("AGENT_SPINE_MODEL", "spine"))
     long_turn_chars: int = 400
+    regions: tuple[Region, ...] = ()
     log: list[dict] = field(default_factory=list)
+
+    def recruit(self, for_work: str) -> Region | None:
+        """Return the region that best fits the work, cheapest among equal fits, or None.
+
+        Cheapest-that-FITS, never cheapest-available and never best-available. Both failure modes
+        are real: consult a roster top-down and the most expensive region answers everything;
+        consult it cost-first with a sloppy match and design work goes to a triage model.
+
+        LANDMINE, PAID FOR: matching by substring sends everything to the cheapest region. The word
+        "a" from "design A migration plan" is a substring of "tri-A-ge", so every region matched
+        every turn and cost alone decided. Whole-token overlap only, and short words are dropped -
+        they carry no signal and match everything.
+        """
+        if not self.regions:
+            return None
+        words = {w for w in re.findall(r"[a-z]+", for_work.lower()) if len(w) > 3}
+        scored = [(len(words & {t for t in re.findall(r"[a-z]+", r.for_work.lower()) if len(t) > 3}), r)
+                  for r in self.regions]
+        best = max(score for score, _ in scored)
+        if best == 0:
+            # Nothing matched. Take the cheapest rather than guessing at a specialist.
+            return min(self.regions, key=lambda r: r.cost)
+        # Strongest fit wins; cost only breaks ties between regions that fit equally well.
+        return min((r for score, r in scored if score == best), key=lambda r: r.cost)
 
     # ── the free classifier ─────────────────────────────────────────────────────────────────
     def classify(self, turn: str, *, recall_hit: bool = False) -> Route:
@@ -140,14 +205,22 @@ class Dispatcher:
         for pattern in ESCALATE_SHAPES:
             if pattern.search(text):
                 if not self.spine_url:
-                    return Route(Tier.LOCAL, "wants a big brain, but no spine is configured - "
+                    return Route(Tier.LOCAL, "wants a recruited region, but no spine is configured - "
                                              "answering locally and saying so")
-                return Route(Tier.SPINE, f"work of a kind the small brain does badly: {pattern.pattern[:40]}",
-                             self.spine_model)
+                region = self.recruit(text)
+                return Route(Tier.CORTEX,
+                             f"work the resident brain does badly; recruited "
+                             f"{region.name if region else self.spine_model}",
+                             region.model if region else self.spine_model,
+                             region.name if region else "")
 
         if len(text) > self.long_turn_chars and self.spine_url:
-            return Route(Tier.SPINE, f"long turn ({len(text)} chars) - context this size is where a "
-                                     "small model degrades", self.spine_model)
+            region = self.recruit(text)
+            return Route(Tier.CORTEX,
+                         f"long turn ({len(text)} chars) - context this size is where a small model "
+                         f"degrades; recruited {region.name if region else self.spine_model}",
+                         region.model if region else self.spine_model,
+                         region.name if region else "")
 
         if self.local_url:
             return Route(Tier.LOCAL, "conversational turn - the resident model is free and instant",
@@ -158,7 +231,7 @@ class Dispatcher:
     def record(self, turn: str, route: Route) -> Route:
         """Log the decision so the routing can be audited rather than assumed."""
         self.log.append({"ts": time.time(), "tier": int(route.tier), "why": route.why,
-                         "chars": len(turn)})
+                         "region": route.region, "chars": len(turn)})
         return route
 
     def dispatch(self, turn: str, *, recall_hit: bool = False) -> Route:
@@ -179,12 +252,12 @@ class Dispatcher:
         total = sum(profile.values()) or 1
         free = profile["RECALL"] + profile["LOCAL"]
         return (f"{total} turns: {profile['RECALL']} recall, {profile['LOCAL']} local, "
-                f"{profile['SPINE']} spine ({free * 100 // total}% free)")
+                f"{profile['CORTEX']} cortex ({free * 100 // total}% free)")
 
     # ── backends ────────────────────────────────────────────────────────────────────────────
     def endpoint(self, tier: Tier) -> str:
         """Return the base URL serving a tier, or an empty string when it is not configured."""
-        return {Tier.RECALL: "", Tier.LOCAL: self.local_url, Tier.SPINE: self.spine_url}[tier]
+        return {Tier.RECALL: "", Tier.LOCAL: self.local_url, Tier.CORTEX: self.spine_url}[tier]
 
     def reachable(self, tier: Tier, timeout: float = 3.0) -> bool:
         """Return True when the tier's endpoint answers its model list."""
@@ -228,7 +301,7 @@ class DispatcherStep(Step):
         if self.dispatcher.local_url:
             live.append("local" + ("" if self.dispatcher.reachable(Tier.LOCAL) else " (UNREACHABLE)"))
         if self.dispatcher.spine_url:
-            live.append("spine" + ("" if self.dispatcher.reachable(Tier.SPINE) else " (UNREACHABLE)"))
+            live.append("spine" + ("" if self.dispatcher.reachable(Tier.CORTEX) else " (UNREACHABLE)"))
         return Evidence(f"routing; tiers: {', '.join(live)}", "classify()")
 
     def failing_variant(self) -> DispatcherStep:
