@@ -376,6 +376,97 @@
         "trust",
         "consent"
       ]
+    },
+    {
+      "id": "L-023",
+      "tell": "a batch of checks fails all at once, all the same way, and you are about to report them as findings about the things being checked",
+      "trade": "suspect your HARNESS before the subjects. A uniform failure across unrelated targets is almost always one thing wrong on your side - a missing PATH entry, an unset variable, a wrong interpreter. Reproduce one by hand before filing eight.",
+      "scar": "A fleet health-check reported 8 of 8 docsite builds FAILED. Every one was the build tool missing from a NON-INTERACTIVE shell's PATH - the survey that found the tool had run through a login shell. Zero of the eight were about the repos. Filing them would have sent someone to fix eight healthy projects.",
+      "cost": "eight false findings, aimed at the wrong people",
+      "tags": [
+        "batch",
+        "all",
+        "failed",
+        "harness",
+        "path",
+        "shell",
+        "non-interactive",
+        "environment",
+        "uniform"
+      ]
+    },
+    {
+      "id": "L-024",
+      "tell": "writing a health check, and deciding what it reports when it cannot determine the answer",
+      "trade": "give it a SKIPPED tier, distinct from FAILED. 'I could not check this' and 'this is broken' are different claims. A check that cannot say the first will say the second, and a report with false reds in it trains its reader to ignore reds - after which the true one goes unread.",
+      "scar": "A fleet report showed 8 FAILED builds that were really unresolvable toolchains. Re-tiering to ok/skip/fail turned it into 2 ok, 5 skipped, 1 genuinely broken - and the 1 was a real plugin-drift bug that had been invisible among the noise.",
+      "cost": "a report nobody reads, hiding the one finding that mattered",
+      "tags": [
+        "check",
+        "report",
+        "failed",
+        "skipped",
+        "health",
+        "monitor",
+        "alert",
+        "false-positive",
+        "noise"
+      ]
+    },
+    {
+      "id": "L-025",
+      "tell": "a check passes, and the environment it passed in was warmed up by something you did earlier in the session",
+      "trade": "re-run it from a COLD state before believing it. A pass that depended on a cache, an installed dep, an already-synced venv or an exported variable is not reproducible - it is a description of your session, not of the thing.",
+      "scar": "A docsite build reported OK. It had only succeeded because a dependency install run minutes earlier had warmed the environment; from clean it did not build at all. The green was real and meant nothing. A later clean run exposed it.",
+      "cost": "a false green, which is worse than a red because nobody investigates it",
+      "tags": [
+        "passed",
+        "green",
+        "cache",
+        "warm",
+        "reproducible",
+        "clean",
+        "fresh",
+        "venv",
+        "stale"
+      ]
+    },
+    {
+      "id": "L-026",
+      "tell": "you have just installed a scheduled job - a timer, a cron, a beat - and it reported success",
+      "trade": "check that it has a NEXT RUN TIME, not merely that it installed. Then confirm it survives your session ending. A scheduler with no next tick is a scheduler that ran once, and a user-level scheduler usually dies with your login unless it is explicitly told to persist.",
+      "scar": "Timers installed cleanly, fired once, and showed no next elapse - the schedule had never armed. Separately, the whole user scheduler was set to stop the moment the session ended, so a 'runs every 15 minutes forever' job would have run only while somebody was watching it.",
+      "cost": "a heartbeat that only beats when observed",
+      "tags": [
+        "timer",
+        "cron",
+        "schedule",
+        "systemd",
+        "beat",
+        "recurring",
+        "persistence",
+        "installed",
+        "enabled"
+      ]
+    },
+    {
+      "id": "L-027",
+      "tell": "about to run a build or install with the tool YOU prefer, in a repo you did not set up",
+      "trade": "detect the project's declared package manager from its own metadata and use THAT. A modern tool pointed at a project managed by a different one fails in a way that looks like the project is broken, and the error names the dependency rather than the mismatch.",
+      "scar": "A build driver kept reporting a missing documentation dependency. The dependency was declared - in a dependency GROUP that the chosen tool does not read at all. The project's own manager installed it and built clean on the first try. Several rounds were spent debugging a healthy repo.",
+      "cost": "rounds of archaeology on a project that was never broken",
+      "tags": [
+        "build",
+        "install",
+        "poetry",
+        "uv",
+        "npm",
+        "package",
+        "manager",
+        "dependency",
+        "missing",
+        "toolchain"
+      ]
     }
   ]
 }
