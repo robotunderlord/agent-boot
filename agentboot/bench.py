@@ -1,0 +1,209 @@
+"""The bench: measure your own recall, then TUNE THE BOOT against the number.
+
+WHAT IS UNDER TEST IS THE BOOT, NOT THE MODEL
+---------------------------------------------
+This is the single most important thing about using a bench, and the easiest to get backwards.
+The tempting experiment is "which model is better". That question is expensive, slow, and mostly
+already answered (research/EXP-006: a small model with the right context matched or beat a large
+one without it).
+
+The useful experiment is: **hold the questions and the model fixed, and vary the BOOT.** Does
+adding this file to the resident set make recall faster? Does reordering the tiers reduce misses?
+Does that reflex table actually get reached for? Those are answerable in minutes and they compound,
+because the boot runs on every session forever.
+
+    fixed: the probe set, the model, the corpus
+    varied: what loads at startup, in what order
+    measured: hit, latency, and WHICH TIER answered
+
+N >= 3, ALWAYS
+--------------
+A single run is noise. Cold caches, a busy host, one unlucky timeout - any of them will flip a
+verdict, and a bench you only ran once will confidently tell you to make a change that does
+nothing. Anything reported here from a single run is labelled as such.
+
+SCORE DISCIPLINE, NOT ONLY CORRECTNESS
+--------------------------------------
+A correct answer reached by the wrong path is a lucky guess that will not repeat. So a probe
+records WHICH TIER answered as well as whether the answer was right. An agent that gets the right
+answer from a 4-second multi-hop search when a 90ms keyed lookup held it has not passed - it has
+demonstrated the exact failure the tiers exist to prevent.
+
+FADING IS THE ACTIONABLE VERDICT
+--------------------------------
+A probe that used to hit and now misses means a pointer rotted: content moved, a file was renamed,
+a tool stopped answering. That is worth more than any latency number, because it is the only signal
+that memory is DECAYING rather than merely slow.
+"""
+from __future__ import annotations
+
+import statistics
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import Enum
+
+
+class Verdict(Enum):
+    """How a probe answered, after N runs."""
+
+    FAST = "FAST"        # resident-speed: reflexive
+    WARM = "WARM"        # a real lookup, still cheap
+    SLOW = "SLOW"        # answered, but by an expensive path
+    FADING = "FADING"    # MISS - the pointer no longer resolves. The actionable one.
+
+    @property
+    def is_miss(self) -> bool:
+        """Return True when the probe failed to answer at all."""
+        return self is Verdict.FADING
+
+
+# Thresholds in milliseconds, taken from the measured gradient in research/EXP-003
+# (resident 0.1ms, keyed ~90ms, semantic ~1.9s, multi-hop ~4.4s).
+FAST_MS = 150.0
+WARM_MS = 2000.0
+
+
+@dataclass(frozen=True)
+class Probe:
+    """One question, and what a correct answer must contain.
+
+    `expect` is a substring the answer must carry. Deliberately crude, and honest about it: a
+    marker cannot judge quality, only that the right THING came back. It is enough to detect
+    rot, which is what this measures.
+    """
+
+    name: str
+    ask: Callable[[], str]
+    expect: str
+    tier: str = ""       # which tier SHOULD answer - scoring the path, not just the result
+
+    def __post_init__(self) -> None:
+        """Refuse a probe with nothing to check against."""
+        if not self.expect.strip():
+            raise ValueError(
+                f"probe {self.name!r} needs an `expect` marker. A probe that cannot fail measures "
+                "nothing, and will report healthy forever.")
+
+
+@dataclass
+class Result:
+    """What one probe did across N runs."""
+
+    probe: str
+    hits: int
+    runs: int
+    median_ms: float
+    tier: str = ""
+    error: str = ""
+
+    @property
+    def verdict(self) -> Verdict:
+        """Return the verdict, judged on the median rather than the best run."""
+        if self.hits == 0:
+            return Verdict.FADING
+        if self.median_ms < FAST_MS:
+            return Verdict.FAST
+        if self.median_ms < WARM_MS:
+            return Verdict.WARM
+        return Verdict.SLOW
+
+    def line(self) -> str:
+        """Return the result as one readable row."""
+        flag = "" if self.hits == self.runs else f"  ({self.hits}/{self.runs} hit)"
+        where = f"  via {self.tier}" if self.tier else ""
+        note = f"  {self.error}" if self.error else ""
+        return f"  {self.verdict.value:<7} {self.median_ms:8.1f} ms  {self.probe}{where}{flag}{note}"
+
+
+@dataclass
+class Bench:
+    """Run a fixed probe set N times and report what actually answered.
+
+    Keep the probes stable across runs. The moment the questions change, two runs are no longer
+    comparable and the bench has stopped being an instrument - it has become an anecdote.
+    """
+
+    probes: list[Probe] = field(default_factory=list)
+    label: str = "unlabelled boot"
+    results: list[Result] = field(default_factory=list)
+
+    def add(self, *probes: Probe) -> Bench:
+        """Add probes and return self so a bench can be built fluently."""
+        self.probes.extend(probes)
+        return self
+
+    def run(self, n: int = 3) -> list[Result]:
+        """Run every probe n times and record hits and median latency.
+
+        n defaults to 3 because 1 is noise. Anything below 3 is reported with a warning rather
+        than quietly presented as a measurement.
+        """
+        if n < 3:
+            print(f"[WARN] n={n} is not a measurement. One unlucky run flips a verdict; "
+                  "3 is the floor for anything you intend to act on.")
+        self.results = []
+        for probe in self.probes:
+            times, hits, error = [], 0, ""
+            for _ in range(n):
+                start = time.perf_counter()
+                try:
+                    answer = probe.ask() or ""
+                except Exception as exc:  # noqa: BLE001 - a broken probe is a FADING result, not a crash
+                    error = f"{type(exc).__name__}: {exc}"
+                    answer = ""
+                times.append((time.perf_counter() - start) * 1000)
+                hits += 1 if probe.expect.lower() in answer.lower() else 0
+            self.results.append(Result(probe.name, hits, n, statistics.median(times),
+                                       probe.tier, error))
+        return self.results
+
+    # ── reporting ───────────────────────────────────────────────────────────────────────────
+    def report(self) -> str:
+        """Return the full run as a readable block."""
+        if not self.results:
+            return "(bench not run)"
+        lines = [f"BENCH: {self.label}", ""]
+        lines += [r.line() for r in self.results]
+        lines += ["", f"  {self.summary()}"]
+        fading = [r.probe for r in self.results if r.verdict.is_miss]
+        if fading:
+            lines += ["",
+                      "  FADING is the actionable verdict - these pointers no longer resolve:",
+                      *[f"    - {name}" for name in fading],
+                      "  Re-point or re-ingest them. A miss is memory DECAYING, not memory slow."]
+        return "\n".join(lines)
+
+    def summary(self) -> str:
+        """Return a one-line score for this boot configuration."""
+        if not self.results:
+            return "not run"
+        counts = {v: sum(1 for r in self.results if r.verdict is v) for v in Verdict}
+        median = statistics.median([r.median_ms for r in self.results])
+        return (f"{len(self.results)} probes: {counts[Verdict.FAST]} fast, {counts[Verdict.WARM]} warm, "
+                f"{counts[Verdict.SLOW]} slow, {counts[Verdict.FADING]} FADING "
+                f"| median {median:.1f} ms")
+
+    def compare(self, other: Bench) -> str:
+        """Compare this run against another boot configuration, probe by probe.
+
+        This is the ONLY output that answers the question worth asking - not "is my recall good"
+        but "did that change to the boot make it better". Keep the probes identical between the
+        two runs or the comparison is meaningless.
+        """
+        mine = {r.probe: r for r in self.results}
+        theirs = {r.probe: r for r in other.results}
+        shared = [p for p in mine if p in theirs]
+        if not shared:
+            return "(no probes in common - the two runs are not comparable)"
+        lines = [f"COMPARE: {self.label}  vs  {other.label}", ""]
+        for name in shared:
+            a, b = mine[name], theirs[name]
+            delta = b.median_ms - a.median_ms
+            arrow = "faster" if delta < 0 else "slower"
+            change = ""
+            if a.verdict is not b.verdict:
+                change = f"   {a.verdict.value} -> {b.verdict.value}"
+            lines.append(f"  {name:<28} {a.median_ms:8.1f} -> {b.median_ms:8.1f} ms  "
+                         f"({abs(delta):.1f} ms {arrow}){change}")
+        return "\n".join(lines)

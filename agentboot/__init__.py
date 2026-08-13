@@ -30,6 +30,7 @@ that should trigger it, because the situation is the only thing an agent actuall
 
 Nothing in this package knows about any particular environment. Steps are whatever you make them.
 """
+from .bench import Bench, Probe, Verdict
 from .boot import Boot, Tier
 from .curriculum import Curriculum, Module
 from .dispatch import Dispatcher, Region, Route, Tier as SpendTier
@@ -52,7 +53,10 @@ __version__ = "0.2.0"
 
 __all__ = [
     "LAYERS",
+    "Bench",
     "Boot",
+    "Probe",
+    "Verdict",
     "CommandStep",
     "Chunk",
     "Crumb",
