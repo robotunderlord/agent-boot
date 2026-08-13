@@ -36,6 +36,19 @@ services:
     init: true
     restart: unless-stopped
 
+    # The agent sits on BOTH planes - the only thing that does. Like a routing engine bridging the
+    # backplane and the front panel, it is the single point where internal state and the outside
+    # world meet, which is exactly why the door on it is TLS'd and credentialed.
+    networks:
+      - backplane
+      - frontpanel
+
+    # Least privilege for the plane that faces outward.
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
     environment:
       # os.pathsep-separated manifest paths, read at boot by ToolRegistry.discover().
       AGENTBOOT_TOOLS: /run/tools.d/environment.json
@@ -114,6 +127,19 @@ services:
     image: mongo:7
     container_name: agent-mongo
     restart: unless-stopped
+
+    # BACKPLANE ONLY. Not on the front panel, no published ports, and - because the backplane is
+    # `internal: true` - no route off the host either. It cannot be reached from outside and it
+    # cannot reach out. The only thing that can talk to it is the agent, which is the only other
+    # thing on this plane.
+    networks:
+      - backplane
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
     volumes:
       # STATE IS THE BEING. The vessel rebuilds from a Dockerfile; this does not rebuild from
       # anything. Back it up OFF this box.
@@ -125,6 +151,30 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+# ── TWO PLANES ───────────────────────────────────────────────────────────────────────────────────
+# Modelled on a router chassis, where the backplane carrying RE-to-PFE traffic is never routed and
+# never reachable from a revenue port. The control plane does not touch the data plane, by
+# construction rather than by firewall rule.
+#
+#     backplane   internal: true. NO route in, NO route out. Memory lives here.
+#     frontpanel  the only plane with exposure. The door lives here.
+#     the agent   the ONLY thing on both - the routing engine between them.
+#
+# Why `internal: true` rather than "just do not publish a port": an unpublished container is still
+# on a bridge with a default route. It can reach the internet, and anything else on that bridge can
+# reach it. `internal` removes the route entirely, so a compromised dependency inside the memory
+# tier has nowhere to call home TO. Segregation you can verify, not segregation you assert.
+#
+# VERIFY IT RATHER THAN TRUST THE FLAG:
+#     docker compose exec mongo getent hosts github.com     -> must FAIL
+#     docker compose exec agent  getent hosts github.com    -> resolves (it is on the front panel)
+networks:
+  backplane:
+    driver: bridge
+    internal: true          # <- the whole point. No gateway is attached to this network.
+  frontpanel:
+    driver: bridge
 
 volumes:
   agent_state:      # his keyed memory — unversioned BEING, not vessel

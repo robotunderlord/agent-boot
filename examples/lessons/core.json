@@ -284,6 +284,25 @@
         "benchmark",
         "latency"
       ]
+    },
+    {
+      "id": "L-018",
+      "tell": "about to call an internal service isolated because no host port was exposed for it",
+      "trade": "check whether it still has a DEFAULT ROUTE. Withholding a host port stops inbound from the host; it does nothing about OUTBOUND, and nothing about peers on the same bridge. Put internal services on a network with no gateway, then VERIFY: `ip route` should show only a link-scope entry and no default, name resolution should fail, and a direct IP should be unreachable.",
+      "scar": "An internal database with no exposed host port sat on an ordinary bridge with a working default route. It could resolve names and reach the internet, and every other container on that bridge could reach it. Moving it to a gateway-less network was one line, and the proof was in the route table: a link-scope entry and nothing else. Not exposed is not isolated.",
+      "cost": "an internal service with a working path to the outside world",
+      "tags": [
+        "network",
+        "isolation",
+        "segregation",
+        "docker",
+        "internal",
+        "egress",
+        "backplane",
+        "route",
+        "firewall",
+        "blast-radius"
+      ]
     }
   ]
 }
