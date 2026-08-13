@@ -16,10 +16,13 @@ import sys
 from pathlib import Path
 
 from .boot import Boot, Tier
+from .lessons import Ledger
+from .tools import ToolRegistry
 from .curriculum import Curriculum
 from .enforcement import LAYERS, POSTURE_LAYER, EnforcementInstaller
 from .intake import Intake, load_answers
 from .persona import Wardrobe
+from .reflexes import Reflexes
 from .session import Session, SessionHost
 from .steps import FileStep, LazyStep
 
@@ -215,8 +218,8 @@ def main(argv: list[str] | None = None) -> int:
     """Parse arguments and dispatch to the requested command."""
     ap = argparse.ArgumentParser(prog="agentboot", description=__doc__.split("\n")[0])
     ap.add_argument("command",
-                    choices=["init", "intake", "syllabus", "attach", "install",
-                             "verify", "uninstall", "demo", "posture"])
+                    choices=["init", "intake", "syllabus", "reflexes", "attach",
+                             "install", "verify", "uninstall", "demo", "posture"])
     ap.add_argument("--claude-dir", help="override ~/.claude")
     ap.add_argument("--payload-dir", help="override ~/.agentboot")
     ap.add_argument("--payloads", help="override the template source directory")
@@ -254,6 +257,19 @@ def main(argv: list[str] | None = None) -> int:
         result = host.step().run()
         print(result.line().render())
         return 0 if not result.status.is_red else 1
+
+    if args.command == "reflexes":
+        _, payloads = _dirs(args)
+        reg = ToolRegistry()
+        reg.discover(tools_dir=payloads / "tools.d")
+        reg.discover_on_path("git", "curl", "python3", "zellij")
+        reg.verify()
+        led = Ledger()
+        led.load(payloads / "lessons") or led.load(REPO_ROOT / "examples" / "lessons")
+        rx = Reflexes(registry=reg, ledger=led)
+        path = rx.write(payloads)
+        print(f"[ OK ] reflexes...... {rx.summary()} -> {path}")
+        return 0
 
     if args.command == "syllabus":
         _, payloads = _dirs(args)

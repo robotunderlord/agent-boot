@@ -97,6 +97,11 @@ services:
       AGENT_CORPUS: /vault
       AGENT_RAG_STORE: /home/agent/.agentboot/rag
       AGENT_RAG_COLLECTION: vault
+      # The embedding model reads from the PLANE, not from the image layer it was baked into.
+      # Both are local, so both are "pre-connected" - but the plane version is shared between
+      # instances, survives a rebuild, and does not ride along in every pull of the image.
+      # The image still carries a copy as a FALLBACK, so an instance with no plane still works.
+      XDG_CACHE_HOME: /home/agent/.agentboot/cache
       # The browser terminal starts ONLY if a credential is supplied. Set it in an env file, never
       # here - a password in a committed compose is a password in the repo's history forever.
       # AGENT_WEB_CREDENTIAL: user:password    <- via `docker compose --env-file`
@@ -108,8 +113,20 @@ services:
 
     volumes:
       # --- the being: mounted, never baked ---
-      - ${AGENT_STATE:-./state}/claude:/home/agent/.claude:rw
-      - ${AGENT_STATE:-./state}/agentboot:/home/agent/.agentboot:rw
+      # From the STORAGE PLANE, by subpath - one host device, many consumers.
+      - type: volume
+        source: agent_storage
+        target: /home/agent/.claude
+        volume: { subpath: claude }
+      - type: volume
+        source: agent_storage
+        target: /home/agent/.agentboot
+        volume: { subpath: agentboot }
+      # Models live on the plane too, NOT in the image. A model is bytes; bytes go on the plane.
+      - type: volume
+        source: agent_storage
+        target: /models
+        volume: { subpath: models }
       # --- what this environment offers (read-only: the agent discovers, it does not edit) ---
       - ./tools.d:/run/tools.d:ro
       # --- the corpus: the knowledge base he indexes, mounted READ-ONLY ---
@@ -172,7 +189,10 @@ services:
     volumes:
       # STATE IS THE BEING. The vessel rebuilds from a Dockerfile; this does not rebuild from
       # anything. Back it up OFF this box.
-      - agent_state:/data/db
+      - type: volume
+        source: agent_storage
+        target: /data/db
+        volume: { subpath: mongo }
     healthcheck:
       # Speak the protocol. A port being open says nothing about whether the database answers.
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
@@ -205,8 +225,33 @@ networks:
   frontpanel:
     driver: bridge
 
+# ── THE STORAGE PLANE ────────────────────────────────────────────────────────────────────────────
+# One place where persistent bytes live, backed by whatever the host actually has - an M.2, a USB
+# enclosure, a PCI card, an array. Point AGENT_STORAGE at it once and every service in the stack
+# extends onto it; move it to faster or bigger hardware by changing one path.
+#
+# THE RULE IT ENFORCES: the image carries CODE, the plane carries BYTES.
+#
+# This is a CORRECTION. The embedding model was baked into the image, taking it from 514MB to
+# 1.31GB, on the argument that pre-connected beats network-fetched. That argument was right and the
+# conclusion was wrong: a volume on local disk IS pre-connected. Baking bought nothing over mounting
+# and cost image size on every pull, every instance, every rebuild - and made the model impossible
+# to share between two agents on the same host.
+#
+# What belongs on the plane: models, keyed state, the vector store, the CA, the tattoo, the memory
+# namespace. What belongs in the image: code, and the templates that scaffold a new store.
+#
+# What must NEVER be here: anything the agent cannot rebuild AND cannot afford to lose without a
+# backup. This plane is the BEING. A vessel rebuilds from a Dockerfile; this does not rebuild from
+# anything, so back it up off the box it runs on.
 volumes:
-  agent_state:      # his keyed memory — unversioned BEING, not vessel
+  agent_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${AGENT_STORAGE:-./storage}
+
 
     # The agent runs INSIDE a named multiplexer session, not as this container's foreground process.
     # That is what makes it detach-survivable: closing your terminal, dropping the VPN, or rebooting
