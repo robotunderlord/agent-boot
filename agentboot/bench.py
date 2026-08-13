@@ -77,6 +77,7 @@ class Probe:
     ask: Callable[[], str]
     expect: str
     tier: str = ""       # which tier SHOULD answer - scoring the path, not just the result
+    negate: bool = False # the marker must be ABSENT - a probe that proves recall can say NO
 
     def __post_init__(self) -> None:
         """Refuse a probe with nothing to check against."""
@@ -96,6 +97,7 @@ class Result:
     median_ms: float
     tier: str = ""
     error: str = ""
+    negate: bool = False
 
     @property
     def verdict(self) -> Verdict:
@@ -110,7 +112,8 @@ class Result:
 
     def line(self) -> str:
         """Return the result as one readable row."""
-        flag = "" if self.hits == self.runs else f"  ({self.hits}/{self.runs} hit)"
+        kind = "correctly-absent" if self.negate else "hit"
+        flag = "" if self.hits == self.runs else f"  ({self.hits}/{self.runs} {kind})"
         where = f"  via {self.tier}" if self.tier else ""
         note = f"  {self.error}" if self.error else ""
         return f"  {self.verdict.value:<7} {self.median_ms:8.1f} ms  {self.probe}{where}{flag}{note}"
@@ -153,9 +156,10 @@ class Bench:
                     error = f"{type(exc).__name__}: {exc}"
                     answer = ""
                 times.append((time.perf_counter() - start) * 1000)
-                hits += 1 if probe.expect.lower() in answer.lower() else 0
+                found = probe.expect.lower() in answer.lower()
+                hits += 1 if (found != probe.negate) else 0
             self.results.append(Result(probe.name, hits, n, statistics.median(times),
-                                       probe.tier, error))
+                                       probe.tier, error, probe.negate))
         return self.results
 
     # ── reporting ───────────────────────────────────────────────────────────────────────────

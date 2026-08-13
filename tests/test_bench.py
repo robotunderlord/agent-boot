@@ -52,6 +52,40 @@ class AMissIsNotSlowness(unittest.TestCase):
         self.assertIn("gone", bench.report())
 
 
+class ANegativeProbeProvesRecallCanSayNo(unittest.TestCase):
+    """REGRESSION: a correctly-absent answer was scored FADING.
+
+    Every probe set needs at least one negative, because a recall that returns something for
+    everything is indistinguishable from a working one - until the day it confidently answers a
+    question you never had a record for.
+
+    The bug was worse than cosmetic: FADING is the bench's only actionable verdict, and an
+    instrument that raises it for HEALTHY behaviour teaches its operator to ignore it. Then the one
+    real rot goes unnoticed among the false alarms. Found by pointing the bench at its own stack.
+    """
+
+    def test_absent_marker_passes_when_negated(self):
+        """Finding nothing is the PASS condition for a negative probe."""
+        bench = Bench().add(Probe("must-miss", lambda: "", "should-not-appear", negate=True))
+        bench.run(n=3)
+        self.assertIsNot(bench.results[0].verdict, Verdict.FADING)
+        self.assertEqual(bench.results[0].hits, 3)
+
+    def test_present_marker_fails_when_negated(self):
+        """A negative probe that DOES find its marker is the real failure."""
+        bench = Bench().add(Probe("leaky", lambda: "should-not-appear here", "should-not-appear",
+                                  negate=True))
+        bench.run(n=3)
+        self.assertIs(bench.results[0].verdict, Verdict.FADING)
+
+    def test_the_row_says_correctly_absent_not_hit(self):
+        """The report must not describe an absence as a hit; the words are the whole point."""
+        bench = Bench().add(Probe("mixed", lambda: "should-not-appear", "should-not-appear",
+                                  negate=True))
+        bench.run(n=3)
+        self.assertIn("correctly-absent", bench.results[0].line())
+
+
 class TheBootIsWhatIsUnderTest(unittest.TestCase):
     """Comparing two runs is the only output that answers the question worth asking."""
 
