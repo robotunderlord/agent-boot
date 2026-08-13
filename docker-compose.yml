@@ -102,6 +102,14 @@ services:
       # instances, survives a rebuild, and does not ride along in every pull of the image.
       # The image still carries a copy as a FALLBACK, so an instance with no plane still works.
       XDG_CACHE_HOME: /home/agent/.agentboot/cache
+      # TIER 1 - the resident brain. Small, CPU-only, on NO account.
+      # Measured on this hardware: ~580ms for a short reply, ~25 tok/s. That is conversational for
+      # acknowledgements and short turns, and deliberately NOT for essays - a long answer here takes
+      # seconds, which is the signal to escalate rather than a defect.
+      AGENT_LOCAL_LLM: http://brain.local:8080/v1
+      AGENT_LOCAL_MODEL: qwen2.5-0.5b-instruct
+      # TIER 2 - the pathway to the recruited regions. The spine carries signals; the regions think.
+      AGENT_SPINE_URL: ${AGENT_SPINE_URL:-}
       # The browser terminal starts ONLY if a credential is supplied. Set it in an env file, never
       # here - a password in a committed compose is a password in the repo's history forever.
       # AGENT_WEB_CREDENTIAL: user:password    <- via `docker compose --env-file`
@@ -110,6 +118,11 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+      # NOT service_healthy, deliberately. The agent must come up whether or not a brain is
+      # attached: with none, the dispatcher degrades to recall-only and says so. An agent that
+      # refuses to start for want of a model is worse than one that can still expand a crumb.
+      brain:
+        condition: service_started
 
     volumes:
       # --- the being: mounted, never baked ---
@@ -138,6 +151,54 @@ services:
 
     ports:
       - "${AGENT_WEB_PORT:-7681}:7681"
+
+  # ── TIER 1: the resident brain ────────────────────────────────────────────────────────────────
+  # Small, CPU-only, and on NO ACCOUNT. This is the autonomic layer - it answers acknowledgements
+  # and short conversational turns so the main loop is instant, and escalates everything else.
+  #
+  # WHY THIS IS NOT A COMPROMISE (research/EXP-006): a SMALL model with the right context matched
+  # or beat a LARGE model without it, at under half the tokens - while the large UNPRIMED one
+  # cowboyed the errand and had to be stopped. Capability was never the binding constraint;
+  # orientation was. The recall behind this model is what makes it adequate.
+  #
+  # MEASURED on an ordinary CPU: ~580ms for a short reply, ~25 tok/s. Conversational for what it is
+  # for. A long answer takes seconds here, and that is the SIGNAL TO ESCALATE, not a defect.
+  #
+  # llama.cpp rather than vLLM: vLLM is built around GPU paged-attention and its CPU path is a large
+  # install for a slow result. For a small always-on brain on cores you already have, llama.cpp is
+  # the right tool. The dispatcher does not care either way - both are OpenAI-compatible URLs.
+  brain:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: agent-brain
+    restart: unless-stopped
+
+    # BACKPLANE ONLY. No exposed port. Nothing outside the stack talks to the brain, and the brain
+    # cannot reach out - which matters more here than elsewhere, because inference is exactly the
+    # kind of workload people accidentally point at the internet.
+    networks:
+      backplane:
+        aliases:
+          - brain.local
+
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+    # The model comes off the STORAGE PLANE, not out of the image. Pull once, share between
+    # instances, survive a rebuild. LANDMINE: an unknown HuggingFace repo returns 401 "Invalid
+    # username or password", NOT 404 - so a typo in the model name reads as an auth failure and
+    # sends you looking for a token you never needed.
+    command: >
+      -hf ${AGENT_BRAIN_MODEL:-Qwen/Qwen2.5-0.5B-Instruct-GGUF}
+      --host 0.0.0.0 --port 8080
+      -c ${AGENT_BRAIN_CTX:-4096}
+      -t ${AGENT_BRAIN_THREADS:-4}
+    volumes:
+      - type: volume
+        source: agent_storage
+        target: /root/.cache/llama.cpp
+        volume: { subpath: models }
 
   # ── DECIDED 2026-08-12: the keyed tier stays on the BRIDGE ────────────────────────────────────
   #
