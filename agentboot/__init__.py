@@ -32,6 +32,7 @@ Nothing in this package knows about any particular environment. Steps are whatev
 """
 from .boot import Boot, Tier
 from .curriculum import Curriculum, Module
+from .dispatch import Dispatcher, Route, Tier as SpendTier
 from .enforcement import LAYERS, EnforcementInstaller, Layer
 from .intake import Intake, Question
 from .keys import Key, KeyFault, Keyring
@@ -61,6 +62,9 @@ __all__ = [
     "EnforcementInstaller",
     "Errand",
     "Curriculum",
+    "Dispatcher",
+    "Route",
+    "SpendTier",
     "Evidence",
     "Intake",
     "Module",
