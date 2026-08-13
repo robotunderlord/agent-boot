@@ -40,8 +40,20 @@ services:
     # backplane and the front panel, it is the single point where internal state and the outside
     # world meet, which is exactly why the door on it is TLS'd and credentialed.
     networks:
-      - backplane
-      - frontpanel
+      backplane:
+        # INTERNAL DNS, the lightest possible kind: docker's embedded resolver (127.0.0.11)
+        # already answers for names on a user-defined bridge. An alias costs nothing and buys a
+        # stable internal name.
+        #
+        # `.local` ON PURPOSE, and NOT the estate's internal zone. A `.int` name would imply the
+        # estate's DNS servers - which this plane cannot reach at all (no route out), and whose
+        # namespace these names would collide with. `.local` says what is true: link-local, answered
+        # only by the local resolver, meaningless one hop away.
+        aliases:
+          - agent.local
+      frontpanel:
+        aliases:
+          - agent.local
 
     # Least privilege for the plane that faces outward.
     security_opt:
@@ -61,8 +73,23 @@ services:
       AGENT_MAIN_LOOP: bash
       ZELLIJ_CONFIG_DIR: /home/agent/.agentboot/zellij
       # The KEYED tier: ~1ms find-by-key, no embedder, no model involved.
-      AGENT_MONGO_URL: mongodb://mongo:27017
+      # Addressed by its link-local alias, resolved only by the embedded resolver on the backplane.
+      AGENT_MONGO_URL: mongodb://memory.local:27017
       AGENT_MONGO_DB: agent
+      # THE ROBOT'S OWN CA - internal to him, borrowed from nothing.
+      #
+      # Generated once at first boot into his state volume and reused forever after. Not the
+      # estate's CA, not a public one: his. That matters for the same reason the rest of the can
+      # does - he must work identically on a laptop, a burst GPU, or a machine that has never heard
+      # of this lab.
+      #
+      # It buys the thing self-signed cannot: import his root ONCE into a browser, and every cert he
+      # ever issues for himself is trusted after that. Self-signed encrypts but authenticates
+      # nothing - a client cannot tell him from an impostor on the same address.
+      #
+      # The private key lives in the state volume at 0600 and never in the image. An image that
+      # baked a CA key would make every copy of it able to impersonate every instance.
+      AGENT_CA_DIR: /home/agent/.agentboot/ca
       # The SEMANTIC tier: nearest-meaning over the vault. Embeddings are computed LOCALLY - the
       # store refuses a remote embedder outright, because embedding a private corpus against a
       # hosted endpoint exports the whole corpus, once, silently, and it does not look like an
@@ -133,7 +160,9 @@ services:
     # cannot reach out. The only thing that can talk to it is the agent, which is the only other
     # thing on this plane.
     networks:
-      - backplane
+      backplane:
+        aliases:
+          - memory.local
 
     security_opt:
       - no-new-privileges:true

@@ -153,6 +153,15 @@ RUN mkdir -p /home/agent/.config/zellij/themes \
  && cp /opt/agent-boot/examples/zellij/main.kdl  /home/agent/.config/zellij/layouts/main.kdl \
  && chown -R agent:agent /home/agent/.config
 
+# Create the state directories IN THE IMAGE, owned by agent.
+#
+# Docker seeds a fresh named volume from whatever the image has at that path - including ownership.
+# If the path does not exist, it creates the mountpoint as ROOT instead, and the unprivileged agent
+# cannot write its own state. That surfaces as `PermissionError: /home/agent/.agentboot/tattoo.md`
+# on first boot with a new volume, which reads as a code bug and is really a mount-ownership one.
+RUN mkdir -p /home/agent/.agentboot/ca /home/agent/.agentboot/tls /home/agent/.claude \
+ && chown -R agent:agent /home/agent/.agentboot /home/agent/.claude
+
 USER agent
 WORKDIR /home/agent
 
