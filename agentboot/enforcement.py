@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -136,8 +137,20 @@ class EnforcementInstaller:
         tmp.replace(self.settings)
 
     def command_for(self, layer: Layer) -> str:
-        """Return the hook command for a layer - a plain cat of an absolute path."""
-        return f"cat {self.payload_dir / layer.payload}"
+        """Return the hook command for a layer, portable across the shell that dispatches it.
+
+        `cat <path>` is the obvious choice and it is a trap on Windows. Reported from a corporate
+        seat (2026-08-13): the interpreter there is Windows Python via pyenv, the interactive shell
+        is Git Bash, but the harness may dispatch hooks through cmd.exe - where `cat` does not
+        exist. The layer would then be configured, silent, and dead, which is the exact failure this
+        package is built to make impossible.
+
+        So the command is built from THIS interpreter (`sys.executable`) reading an absolute path.
+        That works under cmd.exe, PowerShell, bash and sh alike, needs no shell builtin, and cannot
+        disagree with the Python that installed it. Slightly uglier, and correct everywhere.
+        """
+        payload = str((self.payload_dir / layer.payload).resolve())
+        return f'{sys.executable} -c "import sys;sys.stdout.write(open(r\'{payload}\').read())"'
 
     def _is_ours(self, entry: dict, layer: Layer) -> bool:
         """Return True when a settings hook entry is one this installer wrote."""

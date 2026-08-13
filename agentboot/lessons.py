@@ -79,11 +79,21 @@ class Lesson:
         return _tokens(self.tell) | {t.lower() for t in self.tags}
 
     def score(self, situation: str) -> float:
-        """Return how strongly this lesson matches a described situation, from 0.0 to 1.0."""
+        """Return how strongly this lesson matches a described situation, from 0.0 to 1.0.
+
+        Normalised by the SMALLER of the two token sets, and that detail is the whole correctness
+        of this method. Dividing by the lesson's own key count punishes well-written tells: the
+        more carefully you describe the situation, the larger the denominator, the lower every
+        score, and the less often it fires. A terse sloppy tell would out-compete a precise one.
+
+        Caught by exercising it, not by reading it: two lessons with detailed tells scored below
+        threshold for situations they described almost exactly.
+        """
         keys = self.keywords
-        if not keys:
+        query = _tokens(situation)
+        if not keys or not query:
             return 0.0
-        return len(keys & _tokens(situation)) / len(keys)
+        return len(keys & query) / min(len(keys), len(query))
 
     def render(self) -> str:
         """Return the lesson as it should appear when it fires."""
