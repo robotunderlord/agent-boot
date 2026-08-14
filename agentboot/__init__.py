@@ -24,6 +24,9 @@ that should trigger it, because the situation is the only thing an agent actuall
 * `state` / `semantic` - two-speed recall. KEYED is a ~1ms find-by-key with no model in the path;
   SEMANTIC is nearest-meaning over a private corpus, embedded LOCALLY and refusing a remote embedder
   outright, because indexing against a hosted endpoint exports the whole corpus silently.
+* `local_embedding` - one act of remembering, three homes (semantic, keyed, session log), with an
+  honest report of what landed. Partial success is not success: it is truthy only when every
+  REQUIRED store accepted, because a memory in two places out of three has begun drifting.
 * `keys` - the agent carries its own credentials as ciphertext and refuses to install any that
   cannot be fingerprinted, because a key that decrypts cleanly and has no fingerprint fails
   silently, hours later, looking like somebody else's problem.
@@ -38,6 +41,7 @@ from .enforcement import LAYERS, EnforcementInstaller, Layer
 from .intake import Intake, Question
 from .keys import Key, KeyFault, Keyring
 from .lessons import Ledger, Lesson
+from .local_embedding import Destination, EmbedRefused, TripleEmbedder, WriteResult
 from .minion import Errand, Minion
 from .persona import Persona, Wardrobe
 from .reflex_hook import ReflexHook
@@ -66,6 +70,8 @@ __all__ = [
     "KeyedState",
     "StateUnavailable",
     "EnforcementInstaller",
+    "Destination",
+    "EmbedRefused",
     "Errand",
     "Curriculum",
     "Dispatcher",
@@ -100,6 +106,8 @@ __all__ = [
     "Thresholds",
     "Tier",
     "Tool",
+    "TripleEmbedder",
+    "WriteResult",
     "WebTerminal",
     "WebTerminalRefused",
     "ToolRegistry",
