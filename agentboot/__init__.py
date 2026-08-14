@@ -27,6 +27,10 @@ that should trigger it, because the situation is the only thing an agent actuall
 * `local_embedding` - one act of remembering, three homes (semantic, keyed, session log), with an
   honest report of what landed. Partial success is not success: it is truthy only when every
   REQUIRED store accepted, because a memory in two places out of three has begun drifting.
+* `truthiness` - a STATEFUL 1-10 confidence on every claim, re-evaluated whenever a similar one
+  arrives. Corroboration is weighted by source INDEPENDENCE, because repetition is not
+  confirmation; contradiction bites harder than agreement lifts; and what nothing supports decays
+  out and purges itself.
 * `keys` - the agent carries its own credentials as ciphertext and refuses to install any that
   cannot be fingerprinted, because a key that decrypts cleanly and has no fingerprint fails
   silently, hours later, looking like somebody else's problem.
@@ -52,6 +56,7 @@ from .state import Crumb, KeyedState, StateUnavailable
 from .status import Status, StatusLine
 from .steps import CommandStep, Evidence, FileStep, LazyStep, Result, Step, StepFailed
 from .tools import Tool, ToolRegistry
+from .truthiness import Catalogue, Claim, Independence, Source
 from .web import WebTerminal, WebTerminalRefused
 
 __version__ = "0.2.0"
@@ -63,7 +68,9 @@ __all__ = [
     "Probe",
     "Verdict",
     "CommandStep",
+    "Catalogue",
     "Chunk",
+    "Claim",
     "Crumb",
     "SemanticStore",
     "SemanticUnavailable",
@@ -105,6 +112,8 @@ __all__ = [
     "StepFailed",
     "Thresholds",
     "Tier",
+    "Independence",
+    "Source",
     "Tool",
     "TripleEmbedder",
     "WriteResult",
