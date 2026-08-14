@@ -6,7 +6,7 @@ says so at the time.
 """
 import unittest
 
-from agentboot.local_embedding import Destination, EmbedRefused, EmbedStep, TripleEmbedder
+from agentboot.local_embedding import Destination, EmbedRefused, EmbedStep, Role, TripleEmbedder
 
 
 def ok_write(_text, _record):
@@ -101,3 +101,51 @@ class TheBootStepWritesForReal(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TheJoinIsNotAThirdCopy(unittest.TestCase):
+    """The keyed store records WHERE the others went. That is what makes a memory unwindable."""
+
+    def _wired(self, link_writer):
+        """Return an embedder with two leaves that return ids, and one join."""
+        return TripleEmbedder().add(
+            Destination("rag", lambda t, r: "chunk-1"),
+            Destination("log", lambda t, r: "msg-2", required=False),
+            Destination("mongo", link_writer, role=Role.LINK),
+        )
+
+    def test_the_join_receives_every_leaf_id(self):
+        """From one keyed lookup you must be able to reach every other representation."""
+        seen = {}
+        self._wired(lambda t, r: seen.update(r)).remember("something")
+        self.assertEqual(seen.get("refs"), {"rag": "chunk-1", "log": "msg-2"})
+
+    def test_leaves_are_written_before_the_join(self):
+        """A join written first could only record intentions, not references."""
+        order = []
+        e = TripleEmbedder().add(
+            Destination("mongo", lambda t, r: order.append("join"), role=Role.LINK),
+            Destination("rag", lambda t, r: order.append("leaf")),
+        )
+        e.remember("x")
+        self.assertEqual(order, ["leaf", "join"], "leaves must be written before the join")
+
+    def test_a_failed_join_reports_ORPHANED_not_partial(self):
+        """Losing the join is worse than losing a leaf and must not read as an ordinary failure."""
+        def dead(_t, _r):
+            raise ConnectionError("down")
+
+        result = self._wired(dead).remember("x")
+        self.assertFalse(result)
+        self.assertTrue(result.orphaned)
+        self.assertIn("ORPHANED", result.render())
+
+    def test_a_leaf_that_returns_nothing_is_allowed(self):
+        """Not every representation is individually addressable; that is not an error."""
+        seen = {}
+        e = TripleEmbedder().add(
+            Destination("silent", lambda t, r: None),
+            Destination("mongo", lambda t, r: seen.update(r), role=Role.LINK),
+        )
+        self.assertTrue(e.remember("x"))
+        self.assertEqual(seen.get("refs"), {})

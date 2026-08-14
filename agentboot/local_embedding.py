@@ -1,17 +1,29 @@
 """The triple embedder: one act of remembering, three homes, and an honest report of what landed.
 
-WHY THREE
----------
-The same fact is needed in three different shapes, and no single store serves all of them:
+WHY THREE, AND WHY ONE OF THEM IS NOT LIKE THE OTHERS
+------------------------------------------------------
+The same fact is needed in three shapes, and no single store serves all of them:
 
-    SEMANTIC   a vector store   "what relates to this?"        fuzzy, ~100ms, needs an embedder
-    KEYED      a document store "expand this exact thing"      exact, ~1ms, no model in the path
+    SEMANTIC   a vector store   "what relates to this?"        fuzzy, needs an embedder
     LOG        a session log    "show me the conversation"     human-readable, chronological
+    LINK       a document store "expand this exact thing"      exact, no model in the path
 
-Write to one and the other two rot. That is the drift this class exists to prevent: a fact recorded
-in the vector store but not the keyed store is unfindable by key; a fact in both but absent from the
-log is invisible to the human who has to audit it later. **One call, three destinations, or a stated
-failure.**
+The first two are LEAVES. They each hold a representation of the memory and know nothing about the
+other.
+
+**The third is not a third copy. It is the JOIN**, and it is what makes the memory unwindable. It
+records where every other representation went - the chunk id in the vector store, the message id in
+the log - so that from one keyed lookup you can reach all of them. Without it you have three
+archives of the same event that cannot be related to each other, which is not one memory in three
+places: it is three memories that will drift apart and nobody will be able to prove which was first.
+
+Two consequences fall out of that, and both are load-bearing:
+
+1. **Order matters.** Leaves are written FIRST and return their ids; the link store is written LAST,
+   with those ids in hand. A join written before the things it joins can only record intentions.
+2. **The link store is required by default.** Losing a leaf costs you one way of finding a memory.
+   Losing the join costs you the ability to unwind ANY of them - the other writes still succeeded,
+   and are now orphans nobody can tie together.
 
 EMBEDDINGS ARE COMPUTED LOCALLY. NOT A PREFERENCE.
 ---------------------------------------------------
@@ -36,6 +48,7 @@ from __future__ import annotations
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 from .steps import Evidence, Step, StepFailed
@@ -45,13 +58,29 @@ class EmbedRefused(Exception):
     """Raised when remembering cannot be done safely, and so must not be done at all."""
 
 
+class Role(Enum):
+    """What a destination IS, which decides when it is written and what it receives."""
+
+    LEAF = "leaf"    # holds a representation; written first; may return an id
+    LINK = "link"    # holds the JOIN; written last; receives the leaves' ids
+
+
 @dataclass(frozen=True)
 class Destination:
-    """One home for a memory: what it is called, how to write it, and whether it is required."""
+    """One home for a memory: its name, how to write it, its role, and whether it is required.
+
+    A LEAF writer is called `write(text, record)` and may RETURN an id - that id is what the link
+    store needs in order to point back at it. Returning nothing is allowed; it simply means this
+    representation cannot be addressed individually later.
+
+    A LINK writer is called with the same arguments, and the record additionally carries `refs`:
+    a mapping of every leaf name to the id it returned. That mapping IS the unwind path.
+    """
 
     name: str
     write: Callable[[str, dict], Any]
     required: bool = True
+    role: Role = Role.LEAF
 
     def __post_init__(self) -> None:
         """Reject a destination that cannot be written to."""
@@ -68,16 +97,22 @@ class WriteResult:
     landed: dict[str, str] = field(default_factory=dict)
     failed: dict[str, str] = field(default_factory=dict)
     required_failed: set[str] = field(default_factory=set)
+    refs: dict[str, str] = field(default_factory=dict)   # leaf name -> id, the unwind path
+    orphaned: bool = False                                # leaves landed, the JOIN did not
 
     def __bool__(self) -> bool:
         """Return True only when no required destination failed."""
         return not self.required_failed
 
     def render(self) -> str:
-        """Return a one-line summary naming what landed and what did not."""
+        """Return a one-line summary naming what landed, what did not, and whether it can be unwound."""
         ok = ", ".join(sorted(self.landed)) or "nothing"
+        if self.orphaned:
+            return (f"ORPHANED: landed in {ok}, but the JOIN did not - these representations exist "
+                    "and nothing can relate them to each other")
         if not self.failed:
-            return f"remembered in {ok}"
+            linked = f" (unwindable via {len(self.refs)} ref)" if self.refs else ""
+            return f"remembered in {ok}{linked}"
         lost = ", ".join(f"{k} ({v[:40]})" for k, v in sorted(self.failed.items()))
         verdict = "INCOMPLETE" if self.required_failed else "partial, optional only"
         return f"{verdict}: landed in {ok}; did NOT land in {lost}"
@@ -124,14 +159,36 @@ class TripleEmbedder:
 
         record = {"text": text, "ts": time.time(), **meta}
         result = WriteResult()
-        for dest in self.destinations:
+
+        # LEAVES FIRST. They hold the representations and hand back the ids the join needs; a join
+        # written before them could only record intentions.
+        leaves = [d for d in self.destinations if d.role is Role.LEAF]
+        links = [d for d in self.destinations if d.role is Role.LINK]
+
+        for dest in leaves:
             try:
-                dest.write(text, record)
+                ref = dest.write(text, dict(record))
                 result.landed[dest.name] = "ok"
+                if ref is not None:
+                    result.refs[dest.name] = str(ref)
             except Exception as exc:  # noqa: BLE001 - one store failing must not lose the others
                 result.failed[dest.name] = f"{type(exc).__name__}: {exc}"
                 if dest.required:
                     result.required_failed.add(dest.name)
+
+        # THE JOIN LAST, holding every id the leaves returned. This is the unwind path.
+        for dest in links:
+            try:
+                dest.write(text, {**record, "refs": dict(result.refs)})
+                result.landed[dest.name] = "ok"
+            except Exception as exc:  # noqa: BLE001
+                result.failed[dest.name] = f"{type(exc).__name__}: {exc}"
+                if dest.required:
+                    result.required_failed.add(dest.name)
+                # Leaves survived, the join did not: those representations are now ORPHANS. This is
+                # a worse outcome than losing a leaf and must not read as an ordinary partial write.
+                if result.landed:
+                    result.orphaned = True
         return result
 
     def summary(self) -> str:
