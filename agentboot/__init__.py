@@ -27,6 +27,11 @@ that should trigger it, because the situation is the only thing an agent actuall
 * `local_embedding` - one act of remembering, three homes (semantic, keyed, session log), with an
   honest report of what landed. Partial success is not success: it is truthy only when every
   REQUIRED store accepted, because a memory in two places out of three has begun drifting.
+* `library` - documentation VENDORED into local git, classified Dewey-style, and embedded. The
+  classification is one decision that becomes three addresses (shelf, collection, vector namespace).
+  Nested shelves are traversed by unwind/emit/rewind - a map-reduce, so every index is one operation
+  with a different mapper. When a work returns at a CHANGED revision, the claims that cited the old
+  one are challenged automatically: this is the provenance layer under `truthiness`.
 * `truthiness` - a STATEFUL 1-10 confidence on every claim, re-evaluated whenever a similar one
   arrives. Corroboration is weighted by source INDEPENDENCE, because repetition is not
   confirmation; contradiction bites harder than agreement lifts; and what nothing supports decays
@@ -44,6 +49,7 @@ from .dispatch import Dispatcher, Region, Route, Tier as SpendTier
 from .enforcement import LAYERS, EnforcementInstaller, Layer
 from .intake import Intake, Question
 from .keys import Key, KeyFault, Keyring
+from .library import Accession, Book, Classification, Librarian, Shelf
 from .lessons import Ledger, Lesson
 from .local_embedding import Destination, EmbedRefused, TripleEmbedder, WriteResult
 from .minion import Errand, Minion
@@ -68,7 +74,10 @@ __all__ = [
     "Probe",
     "Verdict",
     "CommandStep",
+    "Accession",
+    "Book",
     "Catalogue",
+    "Classification",
     "Chunk",
     "Claim",
     "Crumb",
@@ -113,6 +122,8 @@ __all__ = [
     "Thresholds",
     "Tier",
     "Independence",
+    "Librarian",
+    "Shelf",
     "Source",
     "Tool",
     "TripleEmbedder",
