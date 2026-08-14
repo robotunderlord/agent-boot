@@ -60,8 +60,16 @@ LAYERS: tuple[Layer, ...] = (
           "Orienting (tattoo)...", preserve_local=True),
     Layer("UserPromptSubmit", "nag.md", "ARTIFACT BEFORE ASSERTION",
           "Re-releasing orientation...", preserve_local=True),
+    # The matcher IS the coverage. A rule about a tool this pattern does not name is not enforced -
+    # it is doctrine in a file, which is the thing this package exists to replace.
+    #
+    # PAID FOR: the matcher read `Bash|Edit|Write`, so spawning a subagent matched NOTHING. The
+    # author had written the experiment proving that unprimed children cowboy an errand, had built
+    # the module that generates bounded briefs, and still spawned a blank one hours later - because
+    # the one layer that fires before an action could not see the action. The rule was resident and
+    # structurally unable to fire. Add every tool whose misuse you actually care about.
     Layer("PreToolUse", "nag-terse.md", ">>> BEFORE THIS ACTION <<<",
-          "Before this action...", matcher="Bash|Edit|Write", preserve_local=True),
+          "Before this action...", matcher="Bash|Edit|Write|Agent|Task", preserve_local=True),
 )
 
 # The optional fourth layer: DISPOSITION.

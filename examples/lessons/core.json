@@ -467,6 +467,26 @@
         "missing",
         "toolchain"
       ]
+    },
+    {
+      "id": "L-028",
+      "tell": "about to spawn a subagent, worker, or child instance to do a piece of work for you",
+      "trade": "NEVER spawn a blank one. Hand it a brief before it touches anything: the single errand, what DONE means, what it must not do, the constraints of this environment, and the lessons already paid for that bear on the task. A child with no brief is not a smaller you - it is a stranger with your permissions.",
+      "scar": "An agent wrote an experiment that morning proving an UNPRIMED model cowboys an errand and has to be stopped, while a primed smaller one does it correctly at half the tokens. Hours later, the same agent spawned a bare general-purpose child with no brief at all - despite having also built, that same day, a module whose entire job is generating bounded briefs. The output happened to be good. That is luck, not process: the unprimed run in the original experiment could equally have come out fine by chance, and the finding would still have been true.",
+      "cost": "an unbriefed stranger acting with your permissions, and only luck deciding the outcome",
+      "tags": [
+        "spawn",
+        "subagent",
+        "agent",
+        "child",
+        "worker",
+        "delegate",
+        "dispatch",
+        "brief",
+        "blank",
+        "unprimed",
+        "task"
+      ]
     }
   ]
 }
