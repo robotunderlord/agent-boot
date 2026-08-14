@@ -22,6 +22,7 @@ from .curriculum import Curriculum
 from .enforcement import LAYERS, POSTURE_LAYER, EnforcementInstaller
 from .intake import Intake, load_answers
 from .persona import Wardrobe
+from .reflex_hook import ReflexHook
 from .reflexes import Reflexes
 from .session import Session, SessionHost
 from .steps import FileStep, LazyStep
@@ -218,7 +219,7 @@ def main(argv: list[str] | None = None) -> int:
     """Parse arguments and dispatch to the requested command."""
     ap = argparse.ArgumentParser(prog="agentboot", description=__doc__.split("\n")[0])
     ap.add_argument("command",
-                    choices=["init", "intake", "syllabus", "reflexes", "attach",
+                    choices=["init", "intake", "syllabus", "reflexes", "hook", "attach",
                              "install", "verify", "uninstall", "demo", "posture"])
     ap.add_argument("--claude-dir", help="override ~/.claude")
     ap.add_argument("--payload-dir", help="override ~/.agentboot")
@@ -257,6 +258,10 @@ def main(argv: list[str] | None = None) -> int:
         result = host.step().run()
         print(result.line().render())
         return 0 if not result.status.is_red else 1
+
+    if args.command == "hook":
+        _, payloads = _dirs(args)
+        return ReflexHook(store=payloads).run()
 
     if args.command == "reflexes":
         _, payloads = _dirs(args)

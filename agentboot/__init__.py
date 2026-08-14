@@ -40,6 +40,7 @@ from .keys import Key, KeyFault, Keyring
 from .lessons import Ledger, Lesson
 from .minion import Errand, Minion
 from .persona import Persona, Wardrobe
+from .reflex_hook import ReflexHook
 from .reflexes import Reflexes
 from .semantic import Chunk, SemanticStore, SemanticUnavailable
 from .session import MAIN, Session, SessionHost
@@ -68,6 +69,7 @@ __all__ = [
     "Errand",
     "Curriculum",
     "Dispatcher",
+    "ReflexHook",
     "Reflexes",
     "Region",
     "Route",

@@ -47,6 +47,10 @@ i you we they he she them us our your their my me have has had will would can co
 
 WORD = re.compile(r"[a-z0-9]+")
 
+# How many distinctive shared terms constitute a full match. Caps the scoring denominator so that
+# neither a long tell nor a rich situation can dilute a genuine hit toward zero.
+SIGNAL_TERMS = 4
+
 
 def _tokens(text: str) -> set[str]:
     """Return the meaningful lowercase tokens of a string."""
@@ -81,19 +85,26 @@ class Lesson:
     def score(self, situation: str) -> float:
         """Return how strongly this lesson matches a described situation, from 0.0 to 1.0.
 
-        Normalised by the SMALLER of the two token sets, and that detail is the whole correctness
-        of this method. Dividing by the lesson's own key count punishes well-written tells: the
-        more carefully you describe the situation, the larger the denominator, the lower every
-        score, and the less often it fires. A terse sloppy tell would out-compete a precise one.
-
-        Caught by exercising it, not by reading it: two lessons with detailed tells scored below
-        threshold for situations they described almost exactly.
+        Scored on how many DISTINCTIVE terms are shared, against a capped denominator - see the
+        comment on the return. Both obvious normalisations are wrong in opposite directions, and
+        both were shipped before this one.
         """
         keys = self.keywords
         query = _tokens(situation)
         if not keys or not query:
             return 0.0
-        return len(keys & query) / min(len(keys), len(query))
+        overlap = keys & query
+        # The denominator is CAPPED, and that cap is the whole correctness of this.
+        #
+        # Divide by the lesson's tokens and you punish well-written tells: the more carefully a
+        # situation is described, the larger the denominator, the lower every score.
+        # Divide by the query's tokens and you punish rich situations: a hook supplies tool name
+        # AND command AND description, so the better the context, the more diluted the match.
+        #
+        # Both were shipped and both were wrong, in opposite directions, hours apart. What actually
+        # signals a match is a few DISTINCTIVE shared terms - and three of them means the same thing
+        # whether the tell is eight words or thirty.
+        return len(overlap) / min(len(keys), len(query), SIGNAL_TERMS)
 
     def render(self) -> str:
         """Return the lesson as it should appear when it fires."""
@@ -152,7 +163,7 @@ class Ledger:
         self.lessons.extend(loaded)
         return loaded
 
-    def match(self, situation: str, *, threshold: float = 0.2, limit: int = 3) -> list[Lesson]:
+    def match(self, situation: str, *, threshold: float = 0.5, limit: int = 3) -> list[Lesson]:
         """Return the lessons whose tell most resembles the situation, strongest first.
 
         Crude by design. A hit means "you may have been here before" - go look. It is not a verdict,

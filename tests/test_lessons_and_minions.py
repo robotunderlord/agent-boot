@@ -161,3 +161,40 @@ class AMinionGetsABoundedBrief(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MatchingSurvivesBothDilutions(unittest.TestCase):
+    """REGRESSION x2: both obvious normalisations were shipped, and both were wrong.
+
+    Divide by the LESSON's tokens and a well-written tell scores low, because describing a
+    situation carefully enlarges the denominator. Divide by the QUERY's tokens and a rich situation
+    scores low, because a hook supplies tool name AND command AND description. The first bug
+    suppressed good lessons; the second suppressed good context. Denominator is capped now.
+    """
+
+    def _ledger(self):
+        """Return a ledger with one deliberately long, well-written tell."""
+        return Ledger().add(Lesson(
+            id="L-long",
+            tell=("about to report success because a command exited zero, returned HTTP 200, or a "
+                  "daemon says active"),
+            trade="verify the artifact, not the indicator",
+            tags=("verification", "status", "success", "exit-code")))
+
+    def test_a_bare_situation_fires(self):
+        """The plain description of the tell must match it."""
+        self.assertTrue(self._ledger().match("the deploy returned 200 so it worked"))
+
+    def test_added_context_does_not_suppress_the_match(self):
+        """A hook supplies MORE context; more context must not mean fewer matches."""
+        rich = "Bash docker compose up -d the deploy returned 200 so it worked"
+        self.assertTrue(self._ledger().match(rich),
+                        "richer situation must not dilute a genuine hit below threshold")
+
+    def test_an_unrelated_situation_stays_silent(self):
+        """Precision still matters - a false fire at action time is worse than a miss."""
+        self.assertFalse(self._ledger().match("what colour should the logo be"))
+
+    def test_merely_mentioning_a_shared_word_does_not_fire(self):
+        """One incidental term in common is not a situation."""
+        self.assertFalse(self._ledger().match("Read the status page design doc"))
