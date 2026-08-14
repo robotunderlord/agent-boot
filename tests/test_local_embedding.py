@@ -99,8 +99,6 @@ class TheBootStepWritesForReal(unittest.TestCase):
         self.assertTrue(EmbedStep(e).failing_variant().run().status.is_red)
 
 
-if __name__ == "__main__":
-    unittest.main()
 
 
 class TheJoinIsNotAThirdCopy(unittest.TestCase):
@@ -149,3 +147,6 @@ class TheJoinIsNotAThirdCopy(unittest.TestCase):
         )
         self.assertTrue(e.remember("x"))
         self.assertEqual(seen.get("refs"), {})
+
+if __name__ == "__main__":
+    unittest.main()
