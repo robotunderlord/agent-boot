@@ -27,6 +27,14 @@ that should trigger it, because the situation is the only thing an agent actuall
 * `local_embedding` - one act of remembering, three homes (semantic, keyed, session log), with an
   honest report of what landed. Partial success is not success: it is truthy only when every
   REQUIRED store accepted, because a memory in two places out of three has begun drifting.
+* `common_tongue` - the LITE boot every dispatched agent speaks first: self- and locational
+  awareness, reflexes, both records trades, and NO monitors (a watcher armed by an errand outlives
+  the errand). Certification is a real probe write - an agent that cannot record must not find.
+* `instinct` - reflexes whose response is EXECUTABLE. A lesson emits a sentence and depends on the
+  reader complying; an instinct RUNS, attaches real evidence, and may refuse. A DENY that throws
+  denies, because a check that errored did not pass.
+* `records` - mongoengine document classes: the schema Mongo otherwise will not enforce, with the
+  three log indexes (session, citation, seat) declared as part of the promise.
 * `library` - documentation VENDORED into local git, classified Dewey-style, and embedded. The
   classification is one decision that becomes three addresses (shelf, collection, vector namespace).
   Nested shelves are traversed by unwind/emit/rewind - a map-reduce, so every index is one operation
@@ -49,6 +57,8 @@ from .dispatch import Dispatcher, Region, Route, Tier as SpendTier
 from .enforcement import LAYERS, EnforcementInstaller, Layer
 from .intake import Intake, Question
 from .keys import Key, KeyFault, Keyring
+from .common_tongue import Annotation, CommonTongue, Seat, Stenographer
+from .instinct import Arc, Instinct, Reaction, Response, default_reflexes
 from .library import Accession, Book, Classification, Librarian, Shelf
 from .lessons import Ledger, Lesson
 from .local_embedding import Destination, EmbedRefused, TripleEmbedder, WriteResult
@@ -75,6 +85,9 @@ __all__ = [
     "Verdict",
     "CommandStep",
     "Accession",
+    "Arc",
+    "Annotation",
+    "CommonTongue",
     "Book",
     "Catalogue",
     "Classification",
@@ -122,8 +135,14 @@ __all__ = [
     "Thresholds",
     "Tier",
     "Independence",
+    "Instinct",
+    "default_reflexes",
     "Librarian",
+    "Reaction",
+    "Response",
+    "Seat",
     "Shelf",
+    "Stenographer",
     "Source",
     "Tool",
     "TripleEmbedder",
