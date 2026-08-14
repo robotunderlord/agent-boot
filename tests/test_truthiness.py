@@ -213,5 +213,53 @@ class TheScaleIsNotLinearSoItIsNeverAveraged(unittest.TestCase):
         self.assertEqual(Catalogue().summary(), "0 claims")
 
 
+class TheHorizonIsOnTheChart(unittest.TestCase):
+    """Untested belief is normally an ABSENCE, and an absence reads as fine."""
+
+    def _both(self):
+        """Return a catalogue holding one untested belief and one that survived a challenge."""
+        cat = Catalogue()
+        never = cat.remember("nobody has ever questioned this", "seat")
+        for s in ("x1", "x2", "x3"):
+            never.corroborate(cat.source(s), Independence.INDEPENDENT)
+        survived = cat.remember("this was attacked and held", "seat")
+        for s in ("y1", "y2", "y3"):
+            survived.corroborate(cat.source(s), Independence.INDEPENDENT)
+        survived.contradict(cat.source("attacker"), Independence.INDEPENDENT)
+        for s in ("z1", "z2"):
+            survived.corroborate(cat.source(s), Independence.INDEPENDENT)
+        return cat, never, survived
+
+    def test_surviving_a_challenge_and_never_facing_one_are_different_states(self):
+        """They score almost identically, so the number cannot carry the distinction."""
+        _cat, never, survived = self._both()
+        self.assertFalse(never.tested)
+        self.assertTrue(survived.tested)
+        self.assertLess(abs(never.truthiness - survived.truthiness), 0.5)
+
+    def test_the_horizon_lists_only_untested_belief(self):
+        """The boundary must be an addressable place, not an inference."""
+        cat, never, _survived = self._both()
+        self.assertEqual([c.text for c in cat.horizon(floor=5.5)], [never.text])
+
+    def test_the_untested_count_is_in_the_summary_itself(self):
+        """Visible only when you already suspect it exists is not visible at all."""
+        cat, _n, _s = self._both()
+        self.assertIn("UNTESTED", cat.summary())
+
+    def test_a_claim_renders_its_untested_state(self):
+        """A citation should carry whether anything ever tried to refute it."""
+        cat, never, survived = self._both()
+        self.assertIn("UNTESTED", never.render())
+        self.assertNotIn("UNTESTED", survived.render())
+
+    def test_nothing_untested_leaves_the_summary_clean(self):
+        """A marker that always appears stops being a marker."""
+        cat = Catalogue()
+        cat.remember("a thing", "seat")
+        cat.challenge("a thing", "probe")
+        self.assertNotIn("UNTESTED", cat.summary())
+
+
 if __name__ == "__main__":
     unittest.main()

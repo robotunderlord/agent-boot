@@ -121,6 +121,15 @@ class Claim:
         return self.truthiness > PURGE
 
     @property
+    def tested(self) -> bool:
+        """Return True when something has actually tried to refute this.
+
+        Surviving a challenge and never facing one are different states that produce nearly the same
+        number, so the number cannot carry the distinction and this flag has to.
+        """
+        return bool(self.challengers)
+
+    @property
     def breadth(self) -> float:
         """Return total independent support: each distinct backer counted at its best independence.
 
@@ -180,8 +189,9 @@ class Claim:
                           else 0.0, "decayed (untouched)")
 
     def render(self) -> str:
-        """Return the claim with its confidence and how many sources back it."""
-        return f"[{self.truthiness:4.1f}/10, {len(self.sources)} src] {self.text}"
+        """Return the claim, its confidence, its sources, and whether anything ever tested it."""
+        mark = "" if self.tested else " UNTESTED"
+        return f"[{self.truthiness:4.1f}/10, {len(self.sources)} src{mark}] {self.text}"
 
 
 @dataclass
@@ -281,6 +291,21 @@ class Catalogue:
         return sorted((c for c in self.claims if c.truthiness >= floor),
                       key=lambda c: -c.truthiness)
 
+    def horizon(self, floor: float = 6.0) -> list[Claim]:
+        """Return what is BELIEVED but has never been challenged - the edge of actual knowledge.
+
+        The most dangerous records in any store are here. A claim at 6.4 that nobody ever questioned
+        and a claim at 6.5 that was attacked and survived score almost identically and are not
+        remotely the same thing: one has been over the horizon and come back, the other has never
+        been asked a hard question. Ranking by confidence alone cannot tell them apart, so the
+        untested one gets cited with the authority the tested one earned.
+
+        Naming this as a list is the point. Untested knowledge is normally an ABSENCE - it does not
+        appear anywhere, and an absence reads as fine. This makes the boundary an addressable place
+        you can look at, and therefore a work queue: these are the beliefs to go and attack next.
+        """
+        return [c for c in self.believed(floor) if not c.tested]
+
     def summary(self) -> str:
         """Return the DISTRIBUTION of confidence held. Never a mean - the scale is not linear.
 
@@ -301,5 +326,9 @@ class Catalogue:
         believed = len(self.believed())
         doubted = len([c for c in self.claims if c.truthiness < START])
         contested = len(self.claims) - believed - doubted
-        return (f"{len(self.claims)} claims: {believed} believed, {contested} unsettled, "
+        # The horizon goes IN THE SUMMARY, not behind a method nobody calls. Untested belief that is
+        # only visible when you already suspect it exists is not visible at all.
+        untested = len(self.horizon())
+        edge = f" ({untested} UNTESTED)" if untested else ""
+        return (f"{len(self.claims)} claims: {believed} believed{edge}, {contested} unsettled, "
                 f"{doubted} doubted | {len(self.sources)} sources")
