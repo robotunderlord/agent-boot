@@ -185,5 +185,33 @@ class StandingIsSettledByOutcomes(unittest.TestCase):
         self.assertLess(cat.source("guesser").standing, 0.5)
 
 
+class TheScaleIsNotLinearSoItIsNeverAveraged(unittest.TestCase):
+    """A bounded map of unbounded evidence has no meaningful distances to average."""
+
+    def test_the_summary_reports_a_shape_not_a_mean(self):
+        """A mean of 9.5 and 2.1 is 5.8, which reads neutral and describes no claim held."""
+        cat = Catalogue()
+        cat.claims = [Claim("nearly proven", truthiness=9.5),
+                      Claim("nearly gone", truthiness=2.1)]
+        text = cat.summary()
+        self.assertNotIn("mean", text)
+        self.assertIn("1 believed", text)
+        self.assertIn("1 doubted", text)
+
+    def test_the_three_bands_account_for_every_claim(self):
+        """A summary that loses claims between its own bands is worse than no summary."""
+        cat = Catalogue()
+        cat.claims = [Claim("a", truthiness=9.0), Claim("b", truthiness=5.5),
+                      Claim("c", truthiness=3.0), Claim("d", truthiness=6.5)]
+        believed, unsettled, doubted = (int(n) for n in
+                                        __import__("re").findall(r"(\d+) (?:believed|unsettled|doubted)",
+                                                                 cat.summary()) or [0, 0, 0])
+        self.assertEqual(believed + unsettled + doubted, len(cat.claims))
+
+    def test_an_empty_catalogue_says_so_plainly(self):
+        """Zero claims must not render as zero confidence."""
+        self.assertEqual(Catalogue().summary(), "0 claims")
+
+
 if __name__ == "__main__":
     unittest.main()

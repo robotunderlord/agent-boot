@@ -282,9 +282,24 @@ class Catalogue:
                       key=lambda c: -c.truthiness)
 
     def summary(self) -> str:
-        """Return a one-line description of what is held and how well it stands."""
+        """Return the DISTRIBUTION of confidence held. Never a mean - the scale is not linear.
+
+        Truthiness is a bounded map of unbounded evidence: the gap from 5 to 6 is a little
+        corroboration and the gap from 9 to 9.5 is an enormous amount, because the ceiling is
+        approached and never reached. Distances in that mapped space are not comparable, so
+        averaging them produces a number describing nothing.
+
+        Concretely: a store holding one near-certain claim at 9.5 and one about to be purged at 2.1
+        averages to 5.8, which reads NEUTRAL. Neither claim is neutral, and no claim in the store is
+        anywhere near 5.8. The mean was a confident summary of a fact that did not exist.
+
+        So this reports the shape instead - how many stand, how many are contested, how many are on
+        their way out. Aggregate in the evidence domain if you must aggregate; never in this one.
+        """
         if not self.claims:
             return "0 claims"
-        avg = sum(c.truthiness for c in self.claims) / len(self.claims)
-        return (f"{len(self.claims)} claims, {len(self.believed())} believed, "
-                f"mean {avg:.1f}/10, {len(self.sources)} sources")
+        believed = len(self.believed())
+        doubted = len([c for c in self.claims if c.truthiness < START])
+        contested = len(self.claims) - believed - doubted
+        return (f"{len(self.claims)} claims: {believed} believed, {contested} unsettled, "
+                f"{doubted} doubted | {len(self.sources)} sources")
