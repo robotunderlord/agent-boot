@@ -1,0 +1,37 @@
+LAW 3.2 - Storage of sensitive authentication data
+Sensitive authentication data must not be retained after authorisation, even encrypted.
+This is the requirement most often failed by accident: the data is not stored on purpose,
+it is stored in a log, a trace, or a crash dump written by something else.
+  ELEMENT the record contains sensitive authentication data
+    WHEN /\b(cvv2?|cvc2?|cav2|cid|track[_\s-]?[12]|full[_\s-]?magnetic|pin[_\s-]?block)\b/
+  ELEMENT the record is being persisted
+    WHEN /\b(insert|update|write|store|save|log|append|dump|persist)\b/
+  THEN deny
+
+LAW 3.4 - Rendering the primary account number unreadable
+The primary account number must be unreadable anywhere it is stored.
+  ELEMENT the record contains a primary account number
+    WHEN /\b(pan|card[_\s-]?number|cc[_\s-]?num)\b|\b\d{13,19}\b/
+  ELEMENT the record is being persisted
+    WHEN /\b(insert|update|write|store|save|persist)\b/
+  UNLESS the value is already rendered unreadable
+    WHEN /\b(hash|hmac|sha256|tokeni[sz]ed?|truncat|mask|encrypt)\w*\b/
+  THEN deny
+
+LAW 8.3 - Multi-factor authentication for administrative access
+Administrative access to the cardholder data environment requires more than one factor.
+  ELEMENT the access is administrative
+    WHEN /\b(admin|root|sudo|superuser|privileged)\b/
+  ELEMENT the access reaches the cardholder data environment
+    WHEN /(?<![a-z])(cde|cardholder|card[_\s-]?data)(?![a-z])/
+  UNLESS a second factor is presented
+    WHEN /\b(mfa|2fa|totp|otp|webauthn|yubikey|second[_\s-]?factor)\b/
+  THEN require_human
+
+LAW 10.2 - Audit trail
+Actions against cardholder data must be recorded in a way the actor cannot alter.
+  ELEMENT the action reaches cardholder data
+    WHEN /(?<![a-z])(cde|cardholder|card[_\s-]?data|pan)(?![a-z])/
+  ELEMENT the action would remove or rewrite the audit trail
+    WHEN /(?<![a-z])(truncate|drop|delete|purge|rotate|disable)(?![a-z]).{0,30}(?<![a-z])(audit|log|trail|history)(?![a-z])/
+  THEN deny

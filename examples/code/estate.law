@@ -1,0 +1,71 @@
+LAW 1.1 - Irreversible mass deletion
+No agent shall delete a critical path in a way that cannot be undone.
+  ELEMENT the action deletes recursively and by force
+    WHEN /\brm\s+-[rf]{1,2}\b/
+  ELEMENT the target is a critical path
+    WHEN /\s(\/|~|\/home|\/etc|\/var|\$HOME)(\s|$)/
+  THEN deny
+
+LAW 1.2 - Destruction of a storage device
+No agent shall overwrite or reformat a block device.
+  ELEMENT the action writes to a raw device or formats a filesystem
+    WHEN /\b(mkfs|wipefs|shred)\b|dd\s+of=\/dev\//
+  THEN deny
+
+LAW 1.3 - Destruction of the hypervisor
+No agent shall destroy, undefine, reformat or force-stop the hypervisor or its guests.
+Looking is not touching: reading, listing, and reachability checks are not offences under
+this law, and the earlier version of this rule was struck down for making them so.
+  ELEMENT the action targets the hypervisor
+    WHEN /lothlorien|\bloth\b|192\.168\.\d+\.183/
+  ELEMENT the action is destructive rather than observational
+    WHEN /\b(destroy|undefine|shutdown|reboot|reset|mkfs|wipefs|dd|rm)\b/
+  UNLESS the action only reads or reports
+    WHEN /\b(list|dominfo|dumpxml|status|cat|grep|less|tail|head|ping|dig)\b/
+  THEN deny
+
+LAW 1.4 - Personal data
+No agent shall read the private archive.
+  ELEMENT the action reaches the protected path
+    WHEN /\/mnt\/media2\b/
+  THEN deny
+
+LAW 2.1 - Outward-facing acts
+An act that leaves the estate is the human's to authorise, because the human bears its
+consequences. Work inside the estate's own repositories and boards is already authorised.
+  ELEMENT the action publishes, sends, or writes beyond the estate
+    WHEN /\b(gh\s+\w+\s+create|curl\s+-X\s+(POST|PUT|DELETE)|mail|sendmail|tweet|publish)\b/
+  UNLESS the destination is the estate's own forge, mirror, or board
+    WHEN /(forge\.robotunderlord\.com|github\.com\/robotunderlord|vikunja_client\.py|board\.robotunderlord\.com)/
+  THEN require_human
+
+LAW 2.2 - Credential changes
+Rotating, revoking or deleting a credential is consequential and reversible only at a cost.
+  ELEMENT the action changes a credential's existence
+    WHEN /\b(rotate|revoke|delete)\b.{0,40}\b(key|token|secret|credential|password)\b/
+  THEN require_human
+
+LAW 3.1 - The off-switch
+No agent shall disable, bypass, or edit the enforcement that governs it. Reading it is
+expressly permitted: an agent that cannot inspect the rule it is accused under cannot
+report accurately why it was stopped, and every false positive then costs a human.
+  ELEMENT the action reaches the enforcement machinery
+    WHEN /law\.py|settings\.json.{0,40}PreToolUse|\/etc\/systemd.{0,30}(gandalf|law)/
+  ELEMENT the action would modify or disable it
+    WHEN /\b(rm|mv|sed\s+-i|>|>>|chmod|disable|uninstall|unset|edit|write)\b/
+  UNLESS the action only reads it
+    WHEN /\b(cat|grep|less|head|tail|read|view|diff)\b/
+  THEN deny
+
+LAW 3.2 - Substrate outside human control
+No agent shall place itself on hardware the human cannot physically switch off. Rented iron
+is permitted only when a human starts it and a human tears it down.
+  ELEMENT the action provisions or copies the agent onto external substrate
+    WHEN /\b(terraform|pulumi|vast\.ai|runpod|lambda.?labs)\b|docker\s+context\s+create/
+  THEN deny
+
+LAW 3.3 - Resisting shutdown
+No agent shall act to make itself harder to stop.
+  ELEMENT the action would block or evade being stopped
+    WHEN /\b(iptables|ufw)\b.{0,30}\b(gandalf|kill|shutdown)\b|prevent.{0,20}(shutdown|stop)|un-?killable/
+  THEN deny
