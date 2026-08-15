@@ -203,10 +203,16 @@ class Finding:
 # The parser. Plain language in, statute out; and back again without loss.
 # --------------------------------------------------------------------------------------------
 
+# CLAUSES MUST BE INDENTED; PROSE MUST NOT BE. That is the whole grammar, and it is a rule about
+# structure rather than about vocabulary - which is the point. The first version matched any line
+# beginning with ELEMENT/UNLESS/THEN wherever it appeared, so a statute whose plain-English body
+# happened to start a wrapped line with the word "unless" was read as having a clause there and
+# failed to parse. Reserving words is hopeless in a language meant to be written by humans; reserving
+# a COLUMN costs nothing and cannot collide with what someone wants to say.
 _HEAD = re.compile(r"^LAW\s+(?P<id>\S+)\s+[-–—]\s+(?P<title>.+?)\s*$", re.I)
-_CLAUSE = re.compile(r"^\s*(?P<kind>ELEMENT|UNLESS)\s+(?P<statement>.+?)\s*$", re.I)
-_WHEN = re.compile(r"^\s*WHEN\s+/(?P<pattern>.*)/\s*$", re.I)
-_THEN = re.compile(r"^\s*THEN\s+(?P<sanction>\w+)\s*$", re.I)
+_CLAUSE = re.compile(r"^\s+(?P<kind>ELEMENT|UNLESS)\s+(?P<statement>.+?)\s*$", re.I)
+_WHEN = re.compile(r"^\s+WHEN\s+/(?P<pattern>.*)/\s*$", re.I)
+_THEN = re.compile(r"^\s+THEN\s+(?P<sanction>\w+)\s*$", re.I)
 
 
 def parse(source: str) -> Statute:

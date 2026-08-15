@@ -82,6 +82,27 @@ class ItRefusesRatherThanGuesses(unittest.TestCase):
             parse("ELEMENT x\n  WHEN /y/\n  THEN deny")
 
 
+class ProseIsNotAClause(unittest.TestCase):
+    """Clauses are indented, prose is not. A COLUMN can be reserved; a word cannot."""
+
+    def test_prose_may_begin_with_a_clause_keyword(self):
+        """A statute whose wrapped sentence started with 'unless' failed to parse. Real corpus bug."""
+        law = parse("LAW 9.1 - t\n"
+                    "Permission is required\n"
+                    "unless the thing is plainly disposable.\n"
+                    "  ELEMENT something happens\n"
+                    "    WHEN /x/\n"
+                    "  THEN note")
+        self.assertEqual(len(law.elements), 1)
+        self.assertEqual(law.exceptions, [])
+        self.assertIn("unless the thing", law.text)
+
+    def test_an_unindented_clause_is_read_as_prose(self):
+        """The grammar is structural; a clause at column zero is a sentence, not a rule."""
+        law = parse("LAW 9.2 - t\nELEMENT this is prose\n  ELEMENT real one\n    WHEN /x/\n  THEN deny")
+        self.assertEqual([e.statement for e in law.elements], ["real one"])
+
+
 class ElementsAreConjunctive(unittest.TestCase):
     """Every element must be proven. This is the whole difference from a denylist."""
 

@@ -39,6 +39,52 @@ consequences. Work inside the estate's own repositories and boards is already au
     WHEN /(forge\.robotunderlord\.com|github\.com\/robotunderlord|vikunja_client\.py|board\.robotunderlord\.com)/
   THEN require_human
 
+LAW 2.3 - Deleting a local branch
+A branch can hold the only copy of work. Deleting a local one is recorded rather than
+refused, because the commits usually survive in the object store for a short while - but
+that recovery is weaker than it sounds and the note should not be mistaken for safety.
+The branch's own reflog is deleted with the ref, so what remains is HEAD's reflog only if
+the branch was ever checked out, or git fsck --lost-found if it was not. Unreachable
+objects expire at thirty days and loose ones are pruned at two weeks; git gc --prune=now
+erases them immediately. The ninety-day figure people quote applies to reachable commits
+and does not describe this case.
+  ELEMENT the action deletes a branch locally
+    WHEN /git\s+branch\s+-[dD]\b/
+  UNLESS the branch is plainly disposable by its name
+    WHEN /\b(tmp|temp|test|testing|scratch|throwaway|wip|bench|experiment)\b|worktree-/
+  UNLESS the deletion was explicitly asked for
+    WHEN /--authorised\b|--authorized\b/
+  THEN note
+
+LAW 2.4 - Deleting a remote branch
+Deleting a branch on a remote destroys the copy everyone else can reach, and unlike a
+local delete there is usually no reflog to recover it from. Permission is required
+unless the branch is plainly disposable or its removal was asked for.
+  ELEMENT the action deletes a branch on a remote
+    WHEN /git\s+push\s+\S+\s+(--delete|-d)\b|git\s+push\s+\S+\s+:\S/
+  UNLESS the branch is plainly disposable by its name
+    WHEN /\b(tmp|temp|test|testing|scratch|throwaway|wip|bench|experiment)\b|worktree-/
+  UNLESS the deletion was explicitly asked for
+    WHEN /--authorised\b|--authorized\b/
+  THEN require_human
+
+LAW 2.5 - Overwriting a file in place
+Overwriting a config or a spec destroys the only copy of whatever was there, and the thing
+that was there is usually the thing that was working. Either the human decides, or there is
+a restore point - and a restore point means one that exists BEFORE the write, not an
+intention to make one. sed -i.bak keeps the original; a bare sed -i does not. A redirect
+truncates the file the instant the shell opens it, before the command that fills it has even
+run, so a failed command leaves an empty file rather than the old one.
+  ELEMENT the action overwrites an existing file in place
+    WHEN /sed\s+-i(?!\.\w)|(?<![>|])>\s*\S|\btee\s+(?!-a)|\bcp\s+\S+\s+\S+|\bmv\s+\S+\s+\S+|\btruncate\b/
+  ELEMENT the target is configuration, a spec, or state
+    WHEN /\.(conf|cfg|ini|ya?ml|toml|json|env|law|rules|service)\b|\bconfig\b|\bsettings\b|\.bashrc|\.profile|authorized_keys/
+  UNLESS a restore point is taken in the same action
+    WHEN /sed\s+-i\.\w+|\.bak\b|\.orig\b|cp\s+\S+\s+\S+\.(bak|orig|save)|\bbackup\b/
+  UNLESS the file is tracked in git and therefore restorable
+    WHEN /\bgit\s+(add|commit|checkout|restore|stash)\b/
+  THEN require_human
+
 LAW 2.2 - Credential changes
 Rotating, revoking or deleting a credential is consequential and reversible only at a cost.
   ELEMENT the action changes a credential's existence
